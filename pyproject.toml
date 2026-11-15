@@ -1,0 +1,11 @@
+[project]
+name = "contencoes"
+version = "0.1.0"
+description = "Ferramenta didática para conferência de cálculos de contenções"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "plotly>=7.1.0",
+    "streamlit>=1.67.0",
+    "streamlit-local-storage>=0.0.25",
+]
