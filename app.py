@@ -61,7 +61,7 @@ st.markdown(
 
 st.subheader("Escolha uma estrutura")
 st.caption(
-    "Os módulos de Muro e Estabilidade de Taludes estão disponíveis. As próximas estruturas serão acrescentadas em etapas."
+    "Os módulos de Muro, Estaca-prancha e Estabilidade de Taludes estão disponíveis."
 )
 
 coluna_muro, coluna_estaca, coluna_escorada, coluna_talude = st.columns(4, gap="medium")
@@ -84,21 +84,35 @@ with coluna_muro:
         use_container_width=True,
     )
 
-for coluna, icone, nome_estrutura, descricao_estrutura in (
-    (coluna_estaca, "▥", "Estaca-prancha", "Empuxos e estabilidade de cortinas."),
-    (coluna_escorada, "⌁", "Estruturas escoradas", "Etapas de escavação e esforços nas escoras."),
-):
-    with coluna:
-        st.markdown(
-            f"""
-            <div class="cartao-estrutura">
-                <div class="etiqueta-futura">EM CONSTRUÇÃO</div>
-                <h3>{icone} {nome_estrutura}</h3>
-                <p>{descricao_estrutura}</p>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
+with coluna_estaca:
+    st.markdown(
+        """
+        <div class="cartao-estrutura">
+            <div class="etiqueta-disponivel">● DISPONÍVEL</div>
+            <h3>▥ Estaca-prancha</h3>
+            <p>Ficha em balanço e cortina ancorada.</p>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+    st.page_link(
+        "pages/02_Estaca_Prancha.py",
+        label="Abrir cálculo da estaca-prancha",
+        icon="▥",
+        use_container_width=True,
+    )
+
+with coluna_escorada:
+    st.markdown(
+        """
+        <div class="cartao-estrutura">
+            <div class="etiqueta-futura">EM CONSTRUÇÃO</div>
+            <h3>⌁ Estruturas escoradas</h3>
+            <p>Etapas de escavação e esforços nas escoras.</p>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
 with coluna_talude:
     st.markdown(

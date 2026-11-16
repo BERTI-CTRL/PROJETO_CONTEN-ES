@@ -2,20 +2,21 @@
 
 Ferramenta didática para acompanhar e conferir os cálculos de contenções vistos
 em aula. O projeto implementa o muro trapezoidal de gravidade e a estabilidade
-de taludes circulares; Estaca-prancha e Estruturas escoradas estão “Em construção”.
+de taludes circulares, além de dois casos de estaca-prancha. Estruturas escoradas
+seguem reservadas para uma próxima etapa.
 
 ## Estrutura do projeto
 
 - `app.py`: página inicial.
 - `pages/01_Muro_de_Arrimo.py`: interface do muro, campos, gráficos e memória de cálculo.
 - `contencoes/calculos_muro_de_arrimo.py`: validações e cálculos do muro em Python puro.
+- `pages/02_Estaca_Prancha.py`: interface dos casos em balanço e ancorado.
+- `contencoes/calculos_estaca_prancha.py`: validações, empuxos e equilíbrio das cortinas em Python puro.
 - `pages/04_Estabilidade_de_Taludes.py`: interface, dados, gráficos e memória das fatias.
 - `contencoes/calculos_estabilidade_taludes.py`: geometria e cálculos de Fellenius em Python puro.
 
 O prefixo numérico do arquivo da página determina sua ordem na navegação do
-Streamlit. Cada estrutura terá seu módulo de cálculo na pasta `contencoes/`,
-com um nome que identifica o tipo de estrutura. As páginas 2 e 3 ficam
-reservadas para as próximas etapas.
+Streamlit. A página 3 fica reservada para Estruturas escoradas.
 
 ## Executar localmente
 
@@ -40,7 +41,28 @@ Depois de enviar o repositório para o GitHub:
 3. Nas configurações avançadas, escolha Python 3.11.
 
 O `pyproject.toml` e `uv.lock` registram as dependências para instalação. O
-código desta fase ainda não foi publicado e não há um endereço público.
+repositório no GitHub não publica a aplicação sozinho; configure o Streamlit
+Community Cloud para criar um endereço acessível ao professor.
+
+## Estaca-prancha
+
+A página 2 contém dois casos baseados na aba Estaca-prancha da planilha:
+
+- **Cortina em balanço:** solo granular homogêneo, coeficientes de Rankine,
+  fração mobilizada do empuxo passivo e acréscimo prático sobre a ficha teórica.
+- **Cortina ancorada:** ficha conhecida, duas camadas, sobrecarga, nível d’água,
+  força no tirante e fator de segurança ao tombamento em relação à ancoragem.
+
+O exemplo em balanço resulta em ficha teórica de aproximadamente **6,12 m** e
+ficha preliminar de **7,34 m**. O exemplo ancorado resulta em empuxo ativo de
+**307,50 kN/m**, passivo mobilizado de **220,50 kN/m**, força no tirante de
+**87,00 kN/m** e FS de aproximadamente **1,15**, classificado como “REVER” para
+FS mínimo de 1,50. O caso ancorado adota o peso específico submerso informado
+na planilha e não calcula diferencial hidrostático entre as faces.
+
+Os modelos usam Rankine, solo sem coesão e superfície horizontal. Não incluem
+estabilidade global, deformações ou dimensionamento estrutural da cortina e do
+tirante, e não substituem projeto geotécnico.
 
 ## Estabilidade de taludes
 
