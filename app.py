@@ -61,7 +61,7 @@ st.markdown(
 
 st.subheader("Escolha uma estrutura")
 st.caption(
-    "Os módulos de Muro, Estaca-prancha e Estabilidade de Taludes estão disponíveis."
+    "Os módulos de Muro, Estaca-prancha, Estruturas escoradas e Estabilidade de Taludes estão disponíveis."
 )
 
 coluna_muro, coluna_estaca, coluna_escorada, coluna_talude = st.columns(4, gap="medium")
@@ -98,7 +98,7 @@ with coluna_estaca:
     st.page_link(
         "pages/02_Estaca_Prancha.py",
         label="Abrir cálculo da estaca-prancha",
-        icon="▥",
+        icon="📐",
         use_container_width=True,
     )
 
@@ -106,12 +106,18 @@ with coluna_escorada:
     st.markdown(
         """
         <div class="cartao-estrutura">
-            <div class="etiqueta-futura">EM CONSTRUÇÃO</div>
+            <div class="etiqueta-disponivel">● DISPONÍVEL</div>
             <h3>⌁ Estruturas escoradas</h3>
-            <p>Etapas de escavação e esforços nas escoras.</p>
+            <p>Pressões aparentes, força nas escoras e verificações geotécnicas.</p>
         </div>
         """,
         unsafe_allow_html=True,
+    )
+    st.page_link(
+        "pages/03_Escoradas.py",
+        label="Abrir cálculo das escoradas",
+        icon="🏗️",
+        use_container_width=True,
     )
 
 with coluna_talude:
@@ -128,7 +134,7 @@ with coluna_talude:
     st.page_link(
         "pages/04_Estabilidade_de_Taludes.py",
         label="Abrir cálculo do talude",
-        icon="◢",
+        icon="⛰️",
         use_container_width=True,
     )
 

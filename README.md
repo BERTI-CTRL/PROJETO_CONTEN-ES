@@ -1,9 +1,8 @@
 # Projeto de contenções
 
 Ferramenta didática para acompanhar e conferir os cálculos de contenções vistos
-em aula. O projeto implementa o muro trapezoidal de gravidade e a estabilidade
-de taludes circulares, além de dois casos de estaca-prancha. Estruturas escoradas
-seguem reservadas para uma próxima etapa.
+em aula. O projeto implementa o muro trapezoidal de gravidade, dois casos de
+estaca-prancha, estruturas escoradas e estabilidade de taludes circulares.
 
 ## Estrutura do projeto
 
@@ -12,11 +11,13 @@ seguem reservadas para uma próxima etapa.
 - `contencoes/calculos_muro_de_arrimo.py`: validações e cálculos do muro em Python puro.
 - `pages/02_Estaca_Prancha.py`: interface dos casos em balanço e ancorado.
 - `contencoes/calculos_estaca_prancha.py`: validações, empuxos e equilíbrio das cortinas em Python puro.
+- `pages/03_Escoradas.py`: interface das pressões aparentes e verificações de fundo.
+- `contencoes/calculos_escoradas.py`: fórmulas e validações da aba Escoradas em Python puro.
 - `pages/04_Estabilidade_de_Taludes.py`: interface, dados, gráficos e memória das fatias.
 - `contencoes/calculos_estabilidade_taludes.py`: geometria e cálculos de Fellenius em Python puro.
 
 O prefixo numérico do arquivo da página determina sua ordem na navegação do
-Streamlit. A página 3 fica reservada para Estruturas escoradas.
+Streamlit.
 
 ## Executar localmente
 
@@ -27,7 +28,7 @@ uv sync
 uv run streamlit run app.py
 ```
 
-As entradas do Muro e do Talude são salvas automaticamente no armazenamento
+As entradas das quatro estruturas são salvas automaticamente no armazenamento
 local do navegador. Elas voltam ao abrir a respectiva página no mesmo navegador
 e dispositivo. A limpeza dos dados do navegador apaga esse rascunho; para outro
 dispositivo, os valores precisam ser preenchidos novamente.
@@ -79,6 +80,32 @@ O resultado depende dos raios candidatos e da discretização. O modelo não
 inclui Bishop, superfícies não circulares, sismo, fluxo não hidrostático ou
 busca automática dos pontos de entrada e saída. Não representa uma verificação
 de projeto geotécnico nem aplica um limite universal para o fator de segurança.
+
+## Estruturas escoradas
+
+A página 3 reproduz os quatro módulos da aba Escoradas:
+
+- envoltórias aparentes de Terzaghi–Peck para areia, argila mole/média e argila
+  dura/fissurada, com resultantes do solo e da água, braço total e força axial
+  aproximada por escora;
+- verificação simplificada de ruptura de fundo em argila não drenada pelo método
+  de Terzaghi;
+- estabilidade hidráulica simplificada pelo critério de Graux;
+- profundidade crítica de corte vertical não suportado pela expressão de Fröhlich.
+
+Os exemplos reproduzem pmax = **28,60 kPa**, Eapp = **171,60 kN/m** e força
+aproximada por escora de **111,54 kN** para areia; FS = **8,64** para ruptura de
+fundo; FS = **5,14** para Graux; e Hcr = **2,50 m** para Fröhlich. No exemplo de
+Graux com φ = 30°, a expressão da planilha resulta em Nq ≈ 18,40 e FS ≈ 5,14,
+enquanto o slide 34 informa aproximadamente 20,3 e 5,7. A página segue a
+fórmula da planilha e mostra essa diferença junto ao resultado.
+
+Para argila dura/fissurada, a planilha usa pmax = 0,20γH; o slide 14 também
+apresenta uma faixa de 0,28γH a 0,40γH no patamar. O módulo segue o valor da
+planilha e avisa sobre a divergência quando esse modelo é selecionado. As
+distribuições de carga entre níveis de escora são iguais e aproximadas. Não há
+dimensionamento estrutural ou verificação de flambagem das escoras, nem efeitos
+tridimensionais, água ou análise global nas verificações simplificadas de fundo.
 
 ## Escopo do muro
 

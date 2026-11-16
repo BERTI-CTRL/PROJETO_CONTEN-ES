@@ -17,7 +17,7 @@ from contencoes.calculos_estaca_prancha import (
 )
 
 
-st.set_page_config(page_title="Estaca-prancha | Contenções", page_icon="▥", layout="wide")
+st.set_page_config(page_title="Estaca-prancha | Contenções", page_icon="📐", layout="wide")
 
 CHAVE_ARMAZENAMENTO_NAVEGADOR = "projeto_contencoes_estaca_prancha_v1"
 CHAVE_ESTADO_DA_SESSAO = "dados_estaca_prancha_preservados_na_sessao"

@@ -17,7 +17,7 @@ from contencoes.calculos_estabilidade_taludes import (
 )
 
 
-st.set_page_config(page_title="Talude | Contenções", page_icon="◢", layout="wide")
+st.set_page_config(page_title="Talude | Contenções", page_icon="⛰️", layout="wide")
 
 CHAVE_ARMAZENAMENTO_NAVEGADOR = "projeto_contencoes_talude_v1"
 CHAVE_ESTADO_DA_SESSAO = "dados_talude_preservados_na_sessao"
