@@ -15,6 +15,7 @@ from contencoes.calculos_estabilidade_taludes import (
     gerar_raios_candidatos_padrao,
     validar_entradas_talude,
 )
+from contencoes.exportar_talude_dxf import gerar_desenho_talude_dxf
 
 
 st.set_page_config(page_title="Talude | Contenções", page_icon="⛰️", layout="wide")
@@ -897,6 +898,16 @@ else:
         )
         colunas_resultado[3].metric(
             "Centro y_c", f"{_formatar_numero(circulo_critico['centro_y_m'])} m"
+        )
+        arquivo_dxf_talude = gerar_desenho_talude_dxf(
+            entradas_talude, resultado_talude, circulo_critico
+        )
+        st.download_button(
+            "Baixar perfil CAD (.dxf)",
+            data=arquivo_dxf_talude,
+            file_name=f"perfil_talude_{circulo_critico['identificacao'].lower()}.dxf",
+            mime="application/dxf",
+            help="Desenho em metros com perfil, cotas, camadas, nível d’água, círculo crítico e memorial resumido.",
         )
     else:
         st.warning("Nenhum dos raios candidatos produziu um círculo válido. Ajuste os raios ou a geometria.")

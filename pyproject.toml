@@ -5,6 +5,7 @@ description = "Ferramenta didática para conferência de cálculos de contençõ
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
+    "ezdxf>=1.4.5",
     "plotly>=7.1.0",
     "streamlit>=1.67.0",
     "streamlit-local-storage>=0.0.25",
