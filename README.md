@@ -28,6 +28,8 @@ uv sync
 uv run streamlit run app.py
 ```
 
+Cada página carrega o exemplo da planilha na primeira visita e tem um botão para
+restaurá-lo; dados já salvos no navegador são preservados.
 As entradas das quatro estruturas são salvas automaticamente no armazenamento
 local do navegador. Elas voltam ao abrir a respectiva página no mesmo navegador
 e dispositivo. A limpeza dos dados do navegador apaga esse rascunho; para outro
@@ -73,8 +75,11 @@ pelos pontos de saída e entrada indicados; os raios podem ser editados e o
 menor FS válido é identificado. O perfil permite inclinação variável do terreno
 a montante, face H:V editável, crista, pé e terreno inferior. Inclui sobrecarga
 uniforme na crista, N.A. horizontal, até duas camadas horizontais e de 4 a 50
-fatias. O exemplo inicial reproduz os dados da aba Talude: H = 8 m, H:V = 1,5,
-β = 0°, h₁ = 3 m, zNA = 7,8 m e FS crítico de referência ≈ 1,358.
+fatias. O exemplo inicial reproduz a aba Talude: H = 8 m, H:V = 1,5, β = 0°,
+h₁ = 3 m, zNA = 7,8 m e 20 fatias. A camada 1 usa γ/γsat = 18/20 kN/m³,
+c′ = 10 kPa e φ′ = 30°; a camada 2 usa 20/21 kN/m³, c′ = 5 kPa e φ′ = 30°.
+O círculo crítico da planilha tem FS ≈ **1,446**, raio ≈ **14,221 m** e centro
+(x, y) ≈ **(2,098 m; 13,982 m)**.
 
 O resultado depende dos raios candidatos e da discretização. O modelo não
 inclui Bishop, superfícies não circulares, sismo, fluxo não hidrostático ou
@@ -112,3 +117,10 @@ tridimensionais, água ou análise global nas verificações simplificadas de fu
 O módulo do muro reproduz as hipóteses da planilha e das aulas para conferência
 acadêmica. Não inclui empuxo passivo à frente do muro ou dimensionamento
 estrutural do concreto armado; não substitui projeto executivo.
+
+O exemplo de conferência usa H = 6 m, base = 4 m, topo = 1 m, γc = 24 kN/m³,
+sobrecarga de 10 kPa, atrito na base de 0,80, N.A. a 2 m e duas camadas de 3 m
+(18/20 kN/m³, φ = 30°; 19/21 kN/m³, φ = 25°). Ele resulta em FS de tombamento
+**2,487**, FS de deslizamento **1,419**, tensão máxima **150,14 kPa** e tensão
+mínima **29,86 kPa**. O deslizamento fica marcado para revisão frente ao mínimo
+de 1,50.

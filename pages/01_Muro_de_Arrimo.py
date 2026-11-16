@@ -263,7 +263,7 @@ coluna_botao, coluna_referencia = st.columns([1, 2])
 with coluna_botao:
     st.button("Restaurar exemplo da planilha", on_click=_restaurar_exemplo, use_container_width=True)
 with coluna_referencia:
-    st.caption("Referência: H = 6,30 m · b = 4,00 m · φ = 30° · q = 12 kPa")
+    st.caption("Exemplo da planilha: H = 6 m · b = 4 m · q = 10 kPa · N.A. a 2 m · duas camadas")
 
 with st.container(border=True):
     st.subheader("Geometria, ações e fundação")

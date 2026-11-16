@@ -14,29 +14,36 @@ from typing import Any
 def carregar_exemplo_muro() -> tuple[dict[str, Any], list[dict[str, float]]]:
     """Retorna o caso-base da planilha de conferência."""
     entradas_muro = {
-        "altura_muro_m": 6.30,
+        "altura_muro_m": 6.0,
         "largura_base_m": 4.00,
         "largura_topo_m": 1.00,
-        "peso_especifico_concreto_kN_m3": 22.0,
-        "sobrecarga_kPa": 12.0,
-        "coeficiente_atrito_base": 0.60,
+        "peso_especifico_concreto_kN_m3": 24.0,
+        "sobrecarga_kPa": 10.0,
+        "coeficiente_atrito_base": 0.80,
         "tensao_admissivel_fundacao_kPa": 300.0,
         "fator_seguranca_minimo_tombamento": 1.50,
         "fator_seguranca_minimo_deslizamento": 1.50,
         "metodo_empuxo": "Rankine",
         "inclinacao_aterro_graus": 0.0,
         "atrito_solo_muro_graus": 0.0,
-        "profundidade_nivel_agua_m": None,
+        "profundidade_nivel_agua_m": 2.0,
         "peso_especifico_agua_kN_m3": 9.81,
     }
     camadas_solo = [
         {
-            "espessura_m": 6.30,
-            "peso_especifico_natural_kN_m3": 17.0,
-            "peso_especifico_saturado_kN_m3": 17.0,
+            "espessura_m": 3.0,
+            "peso_especifico_natural_kN_m3": 18.0,
+            "peso_especifico_saturado_kN_m3": 20.0,
             "angulo_atrito_graus": 30.0,
             "coesao_kPa": 0.0,
-        }
+        },
+        {
+            "espessura_m": 3.0,
+            "peso_especifico_natural_kN_m3": 19.0,
+            "peso_especifico_saturado_kN_m3": 21.0,
+            "angulo_atrito_graus": 25.0,
+            "coesao_kPa": 0.0,
+        },
     ]
     return entradas_muro, camadas_solo
 

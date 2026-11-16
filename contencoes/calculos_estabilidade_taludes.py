@@ -28,10 +28,10 @@ def carregar_exemplo_talude() -> dict[str, Any]:
         "peso_especifico_saturado_camada_superior_kN_m3": 20.0,
         "coesao_efetiva_camada_superior_kPa": 10.0,
         "angulo_atrito_efetivo_camada_superior_graus": 30.0,
-        "peso_especifico_natural_camada_inferior_kN_m3": 19.0,
+        "peso_especifico_natural_camada_inferior_kN_m3": 20.0,
         "peso_especifico_saturado_camada_inferior_kN_m3": 21.0,
         "coesao_efetiva_camada_inferior_kPa": 5.0,
-        "angulo_atrito_efetivo_camada_inferior_graus": 28.0,
+        "angulo_atrito_efetivo_camada_inferior_graus": 30.0,
     }
     geometria = _calcular_geometria_entrada(entradas)
     entradas["raios_candidatos_m"] = _gerar_raios_padrao(geometria)
