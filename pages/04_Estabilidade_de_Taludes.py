@@ -268,7 +268,7 @@ def _mostrar_grafico_geometria(
     figura_geometria.update_layout(
         title="Perfil, camadas, nível d’água e círculo selecionado",
         height=620,
-        margin={"l": 55, "r": 25, "t": 65, "b": 175},
+        margin={"l": 55, "r": 25, "t": 65, "b": 225},
         xaxis_title="Distância horizontal x (m), origem no pé do talude",
         yaxis_title="Cota y (m)",
         legend={
@@ -397,7 +397,7 @@ def _mostrar_grafico_angulos(fatias: list[dict[str, Any]]) -> None:
     figura_angulos.update_layout(
         title="Inclinação da base de cada fatia",
         height=420,
-        margin={"l": 55, "r": 25, "t": 55, "b": 120},
+        margin={"l": 55, "r": 25, "t": 55, "b": 170},
         xaxis_title="Número da fatia, da saída à entrada",
         yaxis_title="Ângulo da base α (°)",
         hovermode="closest",
@@ -440,7 +440,7 @@ def _mostrar_grafico_componentes_normais(fatias: list[dict[str, Any]]) -> None:
     figura_normais.update_layout(
         title="Como a água altera a força normal em cada fatia",
         height=440,
-        margin={"l": 55, "r": 25, "t": 55, "b": 140},
+        margin={"l": 55, "r": 25, "t": 55, "b": 185},
         barmode="group",
         xaxis_title="Número da fatia, da saída à entrada",
         yaxis_title="Força (kN/m)",
@@ -486,7 +486,7 @@ def _mostrar_grafico_forcas_por_fatia(fatias: list[dict[str, Any]]) -> None:
     figura_forcas.update_layout(
         title="Forças resistentes e mobilizadas por fatia",
         height=440,
-        margin={"l": 55, "r": 25, "t": 55, "b": 120},
+        margin={"l": 55, "r": 25, "t": 55, "b": 170},
         barmode="group",
         xaxis_title="Número da fatia, da saída à entrada",
         yaxis_title="Força (kN/m)",
