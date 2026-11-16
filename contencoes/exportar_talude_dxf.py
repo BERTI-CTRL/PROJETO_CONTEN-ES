@@ -202,7 +202,7 @@ def _desenhar_fatias(
     _adicionar_texto(
         espaco_modelo,
         "POLIGONOS FECHADOS PARA AREA - cordas usadas pela regra trapezoidal do calculo.",
-        (pontos_perfil[0]["x_m"], menor_cota_desenho_m - deslocamento_area_m - 0.6),
+        (pontos_perfil[0]["x_m"], maior_cota_desenho_m - deslocamento_area_m + 0.65),
         0.24,
         "AREA_CONFERENCIA",
     )
@@ -283,25 +283,82 @@ def _adicionar_memoria_completa(
     circulo: dict[str, Any],
     deslocamento_area_m: float,
 ) -> None:
-    geometria = resultado_talude["geometria"]
     altura_talude_m = float(entradas_talude["altura_talude_m"])
     x_memorial_m = float(entradas_talude["limite_x_grafico_maximo_m"]) + max(
         3.0, altura_talude_m * 0.6
     )
-    y_memorial_m = altura_talude_m + max(2.0, altura_talude_m * 0.35)
-    altura_texto_m = max(0.12, altura_talude_m * 0.018)
-    linhas_memoria = _criar_linhas_memoria(
+    altura_titulo_m = max(0.32, altura_talude_m * 0.055)
+    altura_secao_m = max(0.20, altura_talude_m * 0.032)
+    altura_texto_m = max(0.105, altura_talude_m * 0.014)
+    largura_memorial_m = max(42.0, altura_talude_m * 5.5)
+    y_atual_m = max(
+        altura_talude_m, float(circulo["centro_y_m"])
+    ) + max(2.5, altura_talude_m * 0.4)
+    topo_memorial_m = y_atual_m + altura_titulo_m + 0.2
+
+    _adicionar_texto(
+        espaco_modelo,
+        "TALUDE | MEMORIA DE CALCULO",
+        (x_memorial_m, y_atual_m),
+        altura_titulo_m,
+        "MEMORIAL",
+    )
+    y_atual_m -= altura_titulo_m * 1.7
+    _adicionar_texto(
+        espaco_modelo,
+        f"Circulo critico {circulo['identificacao']} | Metodo de Fellenius | unidades: m, m2, kN/m, kPa e graus",
+        (x_memorial_m, y_atual_m),
+        altura_texto_m * 1.15,
+        "MEMORIAL",
+    )
+    y_atual_m -= altura_texto_m * 2.2
+
+    secoes_memoria = _criar_linhas_memoria(
         entradas_talude, resultado_talude, circulo, deslocamento_area_m
     )
-    conteudo_memoria = "\\P".join(linhas_memoria)
-    espaco_modelo.add_mtext(
-        conteudo_memoria,
-        dxfattribs={
-            "insert": (x_memorial_m, y_memorial_m),
-            "char_height": altura_texto_m,
-            "width": max(34.0, altura_talude_m * 5.0),
-            "layer": "MEMORIAL",
-        },
+    espaco_modelo.add_line(
+        (x_memorial_m, y_atual_m),
+        (x_memorial_m + largura_memorial_m, y_atual_m),
+        dxfattribs={"layer": "MEMORIAL"},
+    )
+    y_atual_m -= altura_texto_m
+
+    for titulo_secao, linhas_secao in secoes_memoria:
+        _adicionar_texto(
+            espaco_modelo,
+            titulo_secao,
+            (x_memorial_m, y_atual_m),
+            altura_secao_m,
+            "MEMORIAL",
+        )
+        y_atual_m -= altura_secao_m * 1.45
+        espaco_modelo.add_line(
+            (x_memorial_m, y_atual_m),
+            (x_memorial_m + largura_memorial_m, y_atual_m),
+            dxfattribs={"layer": "MEMORIAL"},
+        )
+        y_atual_m -= altura_texto_m * 0.6
+        espaco_modelo.add_mtext(
+            "\\P".join(linhas_secao),
+            dxfattribs={
+                "insert": (x_memorial_m, y_atual_m),
+                "char_height": altura_texto_m,
+                "width": largura_memorial_m,
+                "layer": "MEMORIAL",
+            },
+        )
+        y_atual_m -= len(linhas_secao) * altura_texto_m * 1.55 + altura_texto_m * 0.8
+
+    altura_quadro_m = topo_memorial_m - (y_atual_m - 0.2)
+    espaco_modelo.add_lwpolyline(
+        [
+            (x_memorial_m - 0.35, y_atual_m - 0.2),
+            (x_memorial_m + largura_memorial_m + 0.35, y_atual_m - 0.2),
+            (x_memorial_m + largura_memorial_m + 0.35, y_atual_m + altura_quadro_m),
+            (x_memorial_m - 0.35, y_atual_m + altura_quadro_m),
+        ],
+        close=True,
+        dxfattribs={"layer": "MEMORIAL"},
     )
 
 
@@ -310,7 +367,7 @@ def _criar_linhas_memoria(
     resultado_talude: dict[str, Any],
     circulo: dict[str, Any],
     deslocamento_area_m: float,
-) -> list[str]:
+) -> list[tuple[str, list[str]]]:
     geometria = resultado_talude["geometria"]
     altura_talude_m = float(entradas_talude["altura_talude_m"])
     relacao_horizontal_vertical = float(entradas_talude["relacao_horizontal_vertical_face"])
@@ -337,34 +394,45 @@ def _criar_linhas_memoria(
             f"zNA={float(entradas_talude['profundidade_nivel_agua_abaixo_crista_m']):.3f} m abaixo da crista"
         )
 
-    linhas = [
-        "MEMORIA COMPLETA - TALUDE | FELLENIUS (FATIAS ORDINARIAS)",
-        "Unidades: m, m2, kN/m, kPa e graus; largura analisada por metro perpendicular ao corte.",
-        f"GEOMETRIA: x_crista=H*m; x_entrada=x_crista+a; y_entrada=H+(x_entrada-x_crista)*tan(beta); beta={float(entradas_talude['inclinacao_terreno_montante_graus']):.3f} graus.",
-        f"Substituicao: x_crista={altura_talude_m:.3f}*{relacao_horizontal_vertical:.3f}={comprimento_face_m:.3f} m; x_entrada={comprimento_face_m:.3f}+{distancia_entrada_m:.3f}={x_entrada_m:.3f} m; y_entrada={y_entrada_m:.3f} m.",
-        f"d=sqrt((x_entrada+Lb)^2+y_entrada^2)=sqrt(({x_entrada_m:.3f}+{distancia_saida_m:.3f})^2+{y_entrada_m:.3f}^2)={distancia_entrada_saida_m:.3f} m.",
-        "CIRCULO: h0=sqrt(R^2-(d/2)^2); xC=(xE-Lb)/2-(yE/d)*h0; yC=yE/2+((xE+Lb)/d)*h0.",
-        f"Substituicao: h0=sqrt({raio_m:.3f}^2-({distancia_entrada_saida_m:.3f}/2)^2)={altura_centro_m:.3f} m; xC=({x_entrada_m:.3f}-{distancia_saida_m:.3f})/2-({y_entrada_m:.3f}/{distancia_entrada_saida_m:.3f})*{altura_centro_m:.3f}={centro_x_m:.3f} m; yC={y_entrada_m:.3f}/2+(({x_entrada_m:.3f}+{distancia_saida_m:.3f})/{distancia_entrada_saida_m:.3f})*{altura_centro_m:.3f}={centro_y_m:.3f} m.",
-        f"FATIAS: b=d/n={distancia_entrada_saida_m:.3f}/{quantidade_fatias}={largura_fatia_m:.4f} m. As cotas y do painel AREA foram deslocadas {deslocamento_area_m:.3f} m apenas para separar o desenho.",
-        "AREA CAD: cada polilinha fechada em AREA_CONFERENCIA e um trapezio com cordas entre as cotas de borda; AREA > Objeto deve retornar a soma das quatro areas do calculo.",
-        "Area por fatia A=(b/2)*(h_esquerda+h_direita); as quatro parcelas sao camada 1 nao saturada/saturada e camada 2 nao saturada/saturada.",
-        "PESO: W=A1n*gamma1n+A1s*gamma1sat+A2n*gamma2n+A2s*gamma2sat+q*b_crista.",
-        f"PARAMETROS: camada 1 gamma={float(entradas_talude['peso_especifico_natural_camada_superior_kN_m3']):.3f}/{float(entradas_talude['peso_especifico_saturado_camada_superior_kN_m3']):.3f} kN/m3; c'={float(entradas_talude['coesao_efetiva_camada_superior_kPa']):.3f} kPa; phi'={float(entradas_talude['angulo_atrito_efetivo_camada_superior_graus']):.3f} graus.",
-        f"PARAMETROS: camada 2 gamma={float(entradas_talude['peso_especifico_natural_camada_inferior_kN_m3']):.3f}/{float(entradas_talude['peso_especifico_saturado_camada_inferior_kN_m3']):.3f} kN/m3; c'={float(entradas_talude['coesao_efetiva_camada_inferior_kPa']):.3f} kPa; phi'={float(entradas_talude['angulo_atrito_efetivo_camada_inferior_graus']):.3f} graus.",
-        f"CAMADAS: h1={float(entradas_talude['espessura_camada_superior_m']):.3f} m; interface y=H-h1={altura_talude_m:.3f}-{float(entradas_talude['espessura_camada_superior_m']):.3f}={float(geometria['cota_interface_camadas_m']):.3f} m.",
-        "BASE: alpha_i=asin((x_i-xC)/R); alpha_m=(alpha_i+alpha_f)/2; L_arco=R*abs(alpha_f-alpha_i), angulos convertidos para radianos nas funcoes trigonometricas.",
-        f"NIVEL D'AGUA: {cota_nivel_agua_texto}; u=gamma_w*max(0,yNA-y_base,medio); U=u*L_arco. {texto_nivel_agua}.",
-        "FORCAS: N=W*cos(alpha_m); N'=N-U; FRc=c1'*L1+c2'*L2; FRphi=N'[(L1/L)*tan(phi1')+(L2/L)*tan(phi2')]. L1 e L2 sao os comprimentos do arco em cada camada.",
-        "FR=FRc+FRphi; Fmob=W*sin(alpha_m); FS=sum(FR)/sum(Fmob). Forcas resistentes so somadas quando N' >= 0.",
-        f"RESULTADO CRITICO {circulo['identificacao']}: R={raio_m:.4f} m; C=({centro_x_m:.4f}; {centro_y_m:.4f}) m; sum(FR)={float(circulo['resistencia_total_kN_m']):.4f} kN/m; sum(Fmob)={float(circulo['forca_mobilizada_total_kN_m']):.4f} kN/m; FS={float(circulo['resistencia_total_kN_m']):.4f}/{float(circulo['forca_mobilizada_total_kN_m']):.4f}={fator_seguranca:.5f}.",
-        "MEMORIA POR FATIA (os valores intermediarios mantem as unidades indicadas acima):",
+    geometria_e_circulo = [
+        "Geometria: x_crista=H*m; x_entrada=x_crista+a; y_entrada=H+(x_entrada-x_crista)*tan(beta).",
+        f"x_crista={altura_talude_m:.3f}*{relacao_horizontal_vertical:.3f}={comprimento_face_m:.3f} m; beta={float(entradas_talude['inclinacao_terreno_montante_graus']):.3f} graus.",
+        f"x_entrada={comprimento_face_m:.3f}+{distancia_entrada_m:.3f}={x_entrada_m:.3f} m; y_entrada={y_entrada_m:.3f} m; d=sqrt(({x_entrada_m:.3f}+{distancia_saida_m:.3f})^2+{y_entrada_m:.3f}^2)={distancia_entrada_saida_m:.3f} m.",
+        "Circulo: h0=sqrt(R^2-(d/2)^2); xC=(xE-Lb)/2-(yE/d)*h0; yC=yE/2+((xE+Lb)/d)*h0.",
+        f"h0=sqrt({raio_m:.3f}^2-({distancia_entrada_saida_m:.3f}/2)^2)={altura_centro_m:.3f} m; xC=({x_entrada_m:.3f}-{distancia_saida_m:.3f})/2-({y_entrada_m:.3f}/{distancia_entrada_saida_m:.3f})*{altura_centro_m:.3f}={centro_x_m:.3f} m; yC={y_entrada_m:.3f}/2+(({x_entrada_m:.3f}+{distancia_saida_m:.3f})/{distancia_entrada_saida_m:.3f})*{altura_centro_m:.3f}={centro_y_m:.3f} m.",
+        f"Camada superior h1={float(entradas_talude['espessura_camada_superior_m']):.3f} m; interface y=H-h1={altura_talude_m:.3f}-{float(entradas_talude['espessura_camada_superior_m']):.3f}={float(geometria['cota_interface_camadas_m']):.3f} m.",
     ]
+    parametros_e_metodo = [
+        f"Camada 1: gamma natural/saturado={float(entradas_talude['peso_especifico_natural_camada_superior_kN_m3']):.3f}/{float(entradas_talude['peso_especifico_saturado_camada_superior_kN_m3']):.3f} kN/m3; c'={float(entradas_talude['coesao_efetiva_camada_superior_kPa']):.3f} kPa; phi'={float(entradas_talude['angulo_atrito_efetivo_camada_superior_graus']):.3f} graus.",
+        f"Camada 2: gamma natural/saturado={float(entradas_talude['peso_especifico_natural_camada_inferior_kN_m3']):.3f}/{float(entradas_talude['peso_especifico_saturado_camada_inferior_kN_m3']):.3f} kN/m3; c'={float(entradas_talude['coesao_efetiva_camada_inferior_kPa']):.3f} kPa; phi'={float(entradas_talude['angulo_atrito_efetivo_camada_inferior_graus']):.3f} graus.",
+        f"Sobrecarga q={float(entradas_talude['sobrecarga_crista_kPa']):.3f} kPa; peso da agua gamma_w={float(entradas_talude['peso_especifico_agua_kN_m3']):.3f} kN/m3; fatias n={quantidade_fatias}; largura b=d/n={distancia_entrada_saida_m:.3f}/{quantidade_fatias}={largura_fatia_m:.4f} m.",
+        f"Nivel d'agua: {cota_nivel_agua_texto}; {texto_nivel_agua}.",
+        "Area trapezoidal por material: A=(b/2)*(h_esquerda+h_direita), para as 4 parcelas de solo.",
+        "Peso: W=A1n*gamma1n+A1s*gamma1sat+A2n*gamma2n+A2s*gamma2sat+q*b_crista.",
+        "Base: alpha_i=asin((x_i-xC)/R); alpha_m=(alpha_i+alpha_f)/2; L_arco=R*abs(alpha_f-alpha_i), angulos convertidos para radianos nas funcoes trigonometricas.",
+        "Agua: u=gamma_w*max(0,yNA-y_base,medio); U=u*L_arco. Normal: N=W*cos(alpha_m); N'=N-U.",
+        "Resistencia: FRc=c1'*L1+c2'*L2; FRphi=N'[(L1/L)*tan(phi1')+(L2/L)*tan(phi2')]; FR=FRc+FRphi.",
+        "Mobilizacao: Fmob=W*sin(alpha_m). Seguranca: FS=sum(FR)/sum(Fmob); FR so e somada quando N' >= 0.",
+        f"No painel AREA_CONFERENCIA as cotas y foram deslocadas {deslocamento_area_m:.3f} m para separar o desenho; AREA > Objeto retorna a soma das 4 parcelas trapezoidais.",
+    ]
+    resultado_global = [
+        f"Circulo critico {circulo['identificacao']}: R={raio_m:.4f} m; centro C=({centro_x_m:.4f}; {centro_y_m:.4f}) m.",
+        f"Soma resistente={float(circulo['resistencia_total_kN_m']):.4f} kN/m; soma mobilizada={float(circulo['forca_mobilizada_total_kN_m']):.4f} kN/m.",
+        f"FS=sum(FR)/sum(Fmob)={float(circulo['resistencia_total_kN_m']):.4f}/{float(circulo['forca_mobilizada_total_kN_m']):.4f}={fator_seguranca:.5f}.",
+    ]
+    calculos_por_fatia = []
     for fatia in circulo["fatias"]:
-        linhas.extend(_linhas_calculo_fatia(entradas_talude, fatia))
-    linhas.append(
-        "Observacao: desenho e memorial didaticos para conferencia; confirmar criterios, unidades e convencoes adotados no projeto."
+        calculos_por_fatia.extend(_linhas_calculo_fatia(entradas_talude, fatia))
+        calculos_por_fatia.append("")
+    calculos_por_fatia.append(
+        "Desenho e memorial didaticos; confirmar criterios, unidades e convencoes do projeto."
     )
-    return linhas
+    return [
+        ("GEOMETRIA E CIRCULO", geometria_e_circulo),
+        ("PARAMETROS E EQUACOES", parametros_e_metodo),
+        ("RESULTADO GLOBAL", resultado_global),
+        ("MEMORIA DETALHADA POR FATIA", calculos_por_fatia),
+    ]
 
 
 def _linhas_calculo_fatia(entradas_talude: dict[str, Any], fatia: dict[str, Any]) -> list[str]:
@@ -430,14 +498,15 @@ def _linhas_calculo_fatia(entradas_talude: dict[str, Any], fatia: dict[str, Any]
     delta_angulo_rad = float(fatia["variacao_angular_rad"])
     raio_m = comprimento_arco_m / delta_angulo_rad if delta_angulo_rad else 0.0
     alfa_medio_rad = math.radians(angulo_medio_graus)
+    delta_angulo_rad = float(fatia["variacao_angular_rad"])
+    raio_m = comprimento_arco_m / delta_angulo_rad if delta_angulo_rad else 0.0
 
     return [
-        f"F{numero_fatia:02d} | x=[{float(fatia['x_inicial_m']):.3f}; {float(fatia['x_final_m']):.3f}] m; topo=[{float(fatia['cota_topo_inicial_m']):.3f}; {float(fatia['cota_topo_final_m']):.3f}] m; base=[{float(fatia['cota_base_inicial_m']):.3f}; {float(fatia['cota_base_final_m']):.3f}] m; b={largura_crista_m:.4f} m.",
-        f"AREAS: {'; '.join(area_por_camadas)}; Atotal={area_total_m2:.4f} m2.",
-        f"W=({area_camada_superior_nao_saturada_m2:.4f}*{float(entradas_talude['peso_especifico_natural_camada_superior_kN_m3']):.3f}+{area_camada_superior_saturada_m2:.4f}*{float(entradas_talude['peso_especifico_saturado_camada_superior_kN_m3']):.3f}+{area_camada_inferior_nao_saturada_m2:.4f}*{float(entradas_talude['peso_especifico_natural_camada_inferior_kN_m3']):.3f}+{area_camada_inferior_saturada_m2:.4f}*{float(entradas_talude['peso_especifico_saturado_camada_inferior_kN_m3']):.3f}+Q)={peso_fatia_kN_m:.3f} kN/m; Q=q*Bcrista={sobrecarga_kPa:.3f}*{largura_sobrecarga_m:.3f}={sobrecarga_fatia_kN_m:.3f} kN/m.",
-        f"alpha_i={float(fatia['angulo_base_inicial_graus']):.3f}; alpha_f={float(fatia['angulo_base_final_graus']):.3f}; alpha_m={angulo_medio_graus:.3f} graus; L=R*DeltaAlpha={raio_m:.4f}*{delta_angulo_rad:.5f}={comprimento_arco_m:.4f} m; L1={comprimento_camada_superior_m:.4f}; L2={comprimento_camada_inferior_m:.4f} m.",
-        f"{formula_pressao_neutra}; U=u*L={pressao_neutra_kPa:.3f}*{comprimento_arco_m:.4f}={resultante_pressao_neutra_kN_m:.3f} kN/m; N=W*cos({angulo_medio_graus:.3f})={peso_fatia_kN_m:.3f}*{math.cos(alfa_medio_rad):.5f}={forca_normal_total_kN_m:.3f}; N'=N-U={forca_normal_total_kN_m:.3f}-{resultante_pressao_neutra_kN_m:.3f}={forca_normal_efetiva_kN_m:.3f} kN/m.",
-        f"FRc={coesao_superior_kPa:.3f}*{comprimento_camada_superior_m:.4f}+{coesao_inferior_kPa:.3f}*{comprimento_camada_inferior_m:.4f}={forca_resistente_coesao_kN_m:.3f}; FRphi={forca_normal_efetiva_kN_m:.3f}*[{comprimento_camada_superior_m:.4f}/{largura_arco_m:.4f}*tan({atrito_superior_graus:.2f})+{comprimento_camada_inferior_m:.4f}/{largura_arco_m:.4f}*tan({atrito_inferior_graus:.2f})]={forca_resistente_atrito_kN_m:.3f}; FR={forca_resistente_coesao_kN_m:.3f}+{forca_resistente_atrito_kN_m:.3f}={forca_resistente_kN_m:.3f}; Fmob={peso_fatia_kN_m:.3f}*sin({angulo_medio_graus:.3f})={peso_fatia_kN_m:.3f}*{math.sin(alfa_medio_rad):.5f}={forca_mobilizada_kN_m:.3f} kN/m; situacao={fatia['situacao']}.",
+        f"F{numero_fatia:02d} | x=[{float(fatia['x_inicial_m']):.3f}; {float(fatia['x_final_m']):.3f}] m; topo=[{float(fatia['cota_topo_inicial_m']):.3f}; {float(fatia['cota_topo_final_m']):.3f}] m; base=[{float(fatia['cota_base_inicial_m']):.3f}; {float(fatia['cota_base_final_m']):.3f}] m; b={largura_crista_m:.4f} m; alpha_i/f/m={float(fatia['angulo_base_inicial_graus']):.2f}/{float(fatia['angulo_base_final_graus']):.2f}/{angulo_medio_graus:.2f} graus.",
+        f"Arco: L=R*DeltaAlpha={raio_m:.4f}*{delta_angulo_rad:.5f}={comprimento_arco_m:.4f} m; L1={comprimento_camada_superior_m:.4f} m; L2={comprimento_camada_inferior_m:.4f} m. {'; '.join(area_por_camadas)}; Atotal={area_total_m2:.4f} m2.",
+        f"W=({area_camada_superior_nao_saturada_m2:.4f}*{float(entradas_talude['peso_especifico_natural_camada_superior_kN_m3']):.3f}+{area_camada_superior_saturada_m2:.4f}*{float(entradas_talude['peso_especifico_saturado_camada_superior_kN_m3']):.3f}+{area_camada_inferior_nao_saturada_m2:.4f}*{float(entradas_talude['peso_especifico_natural_camada_inferior_kN_m3']):.3f}+{area_camada_inferior_saturada_m2:.4f}*{float(entradas_talude['peso_especifico_saturado_camada_inferior_kN_m3']):.3f}+Q)={peso_fatia_kN_m:.3f} kN/m; Q=q*Bcrista={sobrecarga_kPa:.3f}*{largura_sobrecarga_m:.3f}={sobrecarga_fatia_kN_m:.3f} kN/m; {formula_pressao_neutra}; U=u*L={pressao_neutra_kPa:.3f}*{comprimento_arco_m:.4f}={resultante_pressao_neutra_kN_m:.3f} kN/m.",
+        f"N=W*cos({angulo_medio_graus:.3f})={peso_fatia_kN_m:.3f}*{math.cos(alfa_medio_rad):.5f}={forca_normal_total_kN_m:.3f}; N'=N-U={forca_normal_total_kN_m:.3f}-{resultante_pressao_neutra_kN_m:.3f}={forca_normal_efetiva_kN_m:.3f} kN/m; FRc={coesao_superior_kPa:.3f}*{comprimento_camada_superior_m:.4f}+{coesao_inferior_kPa:.3f}*{comprimento_camada_inferior_m:.4f}={forca_resistente_coesao_kN_m:.3f} kN/m.",
+        f"FRphi={forca_normal_efetiva_kN_m:.3f}*[{comprimento_camada_superior_m:.4f}/{largura_arco_m:.4f}*tan({atrito_superior_graus:.2f})+{comprimento_camada_inferior_m:.4f}/{largura_arco_m:.4f}*tan({atrito_inferior_graus:.2f})]={forca_resistente_atrito_kN_m:.3f}; FR={forca_resistente_coesao_kN_m:.3f}+{forca_resistente_atrito_kN_m:.3f}={forca_resistente_kN_m:.3f}; Fmob={peso_fatia_kN_m:.3f}*sin({angulo_medio_graus:.3f})={peso_fatia_kN_m:.3f}*{math.sin(alfa_medio_rad):.5f}={forca_mobilizada_kN_m:.3f} kN/m; situacao={fatia['situacao']}.",
     ]
 
 
