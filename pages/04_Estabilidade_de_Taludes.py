@@ -343,7 +343,7 @@ def _mostrar_tabela_fatias(fatias: list[dict[str, Any]]) -> None:
         "situacao": "Situação",
     }
     linhas_tabela = [
-        {nome_colunas[campo]: fatia[campo] for campo in nomes_colunas} for fatia in fatias
+        {nomes_colunas[campo]: fatia[campo] for campo in nomes_colunas} for fatia in fatias
     ]
     st.dataframe(linhas_tabela, hide_index=True, width="stretch", height=440)
 
