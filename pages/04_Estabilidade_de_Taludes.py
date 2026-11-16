@@ -907,7 +907,11 @@ else:
             data=arquivo_dxf_talude,
             file_name=f"perfil_talude_{circulo_critico['identificacao'].lower()}.dxf",
             mime="application/dxf",
-            help="Desenho em metros com perfil, cotas, camadas, nível d’água, círculo crítico e memorial resumido.",
+            help="DXF em metros com perfil, cotas, círculo, fatias e memória completa. Use as polilinhas fechadas da camada AREA_CONFERENCIA para conferir cada área com AREA > Objeto.",
+        )
+        st.caption(
+            "No DXF, a camada AREA_CONFERENCIA contém uma polilinha fechada por fatia. "
+            "Use AREA > Objeto e compare com Atotal de cada fatia no memorial."
         )
     else:
         st.warning("Nenhum dos raios candidatos produziu um círculo válido. Ajuste os raios ou a geometria.")

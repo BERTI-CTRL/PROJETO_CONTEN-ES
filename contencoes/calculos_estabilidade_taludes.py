@@ -526,6 +526,10 @@ def _criar_fatias(
                 "x_medio_m": x_medio_m,
                 "cota_topo_m": cota_topo_media_m,
                 "cota_base_m": cota_base_media_m,
+                "cota_topo_inicial_m": cota_topo_inicial_m,
+                "cota_topo_final_m": cota_topo_final_m,
+                "cota_base_inicial_m": cota_base_inicial_m,
+                "cota_base_final_m": cota_base_final_m,
                 "angulo_base_inicial_graus": angulo_inicial_graus,
                 "angulo_base_final_graus": angulo_final_graus,
                 "variacao_angular_rad": variacao_angular_rad,
@@ -625,7 +629,7 @@ def _calcular_areas_fatia(
     cota_topo_final_m: float,
     cota_base_inicial_m: float,
     cota_base_final_m: float,
-) -> dict[str, float]:
+) -> dict[str, Any]:
     cota_interface_m = geometria["cota_interface_camadas_m"]
     cota_nivel_agua_m = geometria["cota_nivel_agua_m"]
     limite_agua_para_area_m = (
@@ -673,6 +677,8 @@ def _calcular_areas_fatia(
         * (areas_borda_inicial[2] + areas_borda_final[2]),
         "area_camada_inferior_saturada_m2": fator_area_trapezio
         * (areas_borda_inicial[3] + areas_borda_final[3]),
+        "espessuras_componentes_inicial_m": areas_borda_inicial,
+        "espessuras_componentes_final_m": areas_borda_final,
     }
 
 
