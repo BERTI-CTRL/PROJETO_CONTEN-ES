@@ -61,7 +61,7 @@ st.markdown(
 
 st.subheader("Escolha uma estrutura")
 st.caption(
-    "O desenvolvimento é dividido em etapas. O primeiro módulo disponível é o muro de arrimo."
+    "Os módulos de Muro e Estabilidade de Taludes estão disponíveis. As próximas estruturas serão acrescentadas em etapas."
 )
 
 coluna_muro, coluna_estaca, coluna_escorada, coluna_talude = st.columns(4, gap="medium")
@@ -87,7 +87,6 @@ with coluna_muro:
 for coluna, icone, nome_estrutura, descricao_estrutura in (
     (coluna_estaca, "▥", "Estaca-prancha", "Empuxos e estabilidade de cortinas."),
     (coluna_escorada, "⌁", "Estruturas escoradas", "Etapas de escavação e esforços nas escoras."),
-    (coluna_talude, "◢", "Estabilidade de taludes", "Análises de estabilidade do maciço."),
 ):
     with coluna:
         st.markdown(
@@ -101,8 +100,26 @@ for coluna, icone, nome_estrutura, descricao_estrutura in (
             unsafe_allow_html=True,
         )
 
+with coluna_talude:
+    st.markdown(
+        """
+        <div class="cartao-estrutura">
+            <div class="etiqueta-disponivel">● DISPONÍVEL</div>
+            <h3>◢ Estabilidade de taludes</h3>
+            <p>Superfícies circulares por fatias e busca do FS crítico.</p>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+    st.page_link(
+        "pages/04_Estabilidade_de_Taludes.py",
+        label="Abrir cálculo do talude",
+        icon="◢",
+        use_container_width=True,
+    )
+
 st.divider()
 st.markdown(
     "**Uso didático:** os cálculos seguem as hipóteses da planilha e das aulas de referência. "
-    "Esta fase não verifica ruptura global nem dimensiona concreto armado."
+    "Confira em cada página os métodos e limites incluídos."
 )
