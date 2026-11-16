@@ -102,6 +102,17 @@ def _formatar_numero(valor: float | None, casas_decimais: int = 3) -> str:
     return f"{valor:,.{casas_decimais}f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
 
+def _configuracao_download_png(nome_arquivo: str) -> dict[str, Any]:
+    return {
+        "displaylogo": False,
+        "toImageButtonOptions": {
+            "format": "png",
+            "filename": nome_arquivo,
+            "scale": 2,
+        },
+    }
+
+
 def _cota_terreno_grafico(x_m: float, entradas_talude: dict[str, Any]) -> float:
     altura_talude_m = float(entradas_talude["altura_talude_m"])
     relacao_horizontal_vertical_face = float(
@@ -165,9 +176,25 @@ def _mostrar_grafico_geometria(
             )
         )
 
+    comprimento_horizontal_face_m = resultado_talude["geometria"][
+        "comprimento_horizontal_face_m"
+    ]
+    x_saida_m = -float(entradas_talude["distancia_pe_saida_m"])
+    x_entrada_m = resultado_talude["geometria"]["coordenada_x_entrada_m"]
+    figura_geometria.add_trace(
+        go.Scatter(
+            x=[x_saida_m, comprimento_horizontal_face_m, x_entrada_m],
+            y=[0.0, float(entradas_talude["altura_talude_m"]), resultado_talude["geometria"]["cota_entrada_m"]],
+            mode="markers+text",
+            marker={"color": ["#c34b3c", "#17374c", "#c34b3c"], "size": 9},
+            text=["Saída", "Crista", "Entrada"],
+            textposition=["bottom left", "top center", "top right"],
+            name="Pontos do perfil",
+            hovertemplate="%{text}<br>x = %{x:.2f} m<br>y = %{y:.2f} m<extra></extra>",
+        )
+    )
+
     if circulo_selecionado and circulo_selecionado["centro_x_m"] is not None:
-        x_saida_m = -float(entradas_talude["distancia_pe_saida_m"])
-        x_entrada_m = resultado_talude["geometria"]["coordenada_x_entrada_m"]
         quantidade_pontos = 121
         coordenadas_arco_x = [
             x_saida_m + indice * (x_entrada_m - x_saida_m) / (quantidade_pontos - 1)
@@ -242,11 +269,12 @@ def _mostrar_grafico_geometria(
 
     figura_geometria.update_layout(
         title="Perfil, camadas, nível d’água e círculo selecionado",
-        height=540,
+        height=620,
         margin={"l": 18, "r": 18, "t": 55, "b": 35},
-        xaxis_title="x (m) · origem no pé; positivo em direção à crista",
+        xaxis_title="Distância horizontal x (m), origem no pé do talude",
         yaxis_title="Cota y (m)",
         legend={"orientation": "h", "y": -0.28},
+        hovermode="closest",
         paper_bgcolor="white",
         plot_bgcolor="white",
     )
@@ -256,7 +284,12 @@ def _mostrar_grafico_geometria(
     figura_geometria.update_yaxes(
         range=[menor_cota_m - 0.05 * max(1.0, maior_cota_m), maior_cota_m * 1.1 + 0.1]
     )
-    st.plotly_chart(figura_geometria, width="stretch", theme=None)
+    st.plotly_chart(
+        figura_geometria,
+        width="stretch",
+        theme=None,
+        config=_configuracao_download_png("perfil_talude"),
+    )
 
 
 def _coordenadas_arco_y(circulo: dict[str, Any]) -> list[float]:
@@ -271,15 +304,17 @@ def _coordenadas_arco_y(circulo: dict[str, Any]) -> list[float]:
 def _mostrar_grafico_fator_raio(
     circulos: list[dict[str, Any]], identificacao_critica: str | None, fs_maximo_grafico: float
 ) -> None:
-    circulos_validos = [circulo for circulo in circulos if circulo["situacao"] == "VÁLIDO"]
+    circulos_validos = sorted(
+        (circulo for circulo in circulos if circulo["situacao"] == "VÁLIDO"),
+        key=lambda circulo: circulo["raio_m"],
+    )
     figura_fs_raio = go.Figure()
     figura_fs_raio.add_trace(
         go.Scatter(
             x=[circulo["raio_m"] for circulo in circulos_validos],
             y=[circulo["fator_seguranca"] for circulo in circulos_validos],
-            mode="lines+markers",
-            line={"color": "#176452", "width": 2},
-            marker={"size": 9},
+            mode="markers",
+            marker={"color": "#176452", "size": 10, "line": {"color": "white", "width": 1}},
             text=[circulo["identificacao"] for circulo in circulos_validos],
             name="Círculos válidos",
             hovertemplate="%{text}<br>R = %{x:.3f} m<br>FS = %{y:.3f}<extra></extra>",
@@ -304,63 +339,317 @@ def _mostrar_grafico_fator_raio(
         )
     figura_fs_raio.update_layout(
         title="Comparação do fator de segurança por raio",
-        height=360,
+        height=440,
         margin={"l": 18, "r": 18, "t": 55, "b": 35},
         xaxis_title="Raio R (m)",
         yaxis_title="Fator de segurança, FS",
         showlegend=False,
+        hovermode="closest",
         paper_bgcolor="white",
         plot_bgcolor="white",
     )
     figura_fs_raio.update_yaxes(range=[0, fs_maximo_grafico], rangemode="tozero")
-    st.plotly_chart(figura_fs_raio, width="stretch", theme=None)
+    st.plotly_chart(
+        figura_fs_raio,
+        width="stretch",
+        theme=None,
+        config=_configuracao_download_png("fator_seguranca_por_raio"),
+    )
+
+
+def _mostrar_grafico_angulos(fatias: list[dict[str, Any]]) -> None:
+    numeros_fatias = [fatia["numero_fatia"] for fatia in fatias]
+    figura_angulos = go.Figure()
+    for campo, nome, cor, estilo in (
+        ("angulo_base_inicial_graus", "α₁ · início da base", "#58758a", "dot"),
+        ("angulo_base_final_graus", "α₂ · fim da base", "#d99028", "dot"),
+        ("angulo_base_medio_graus", "α médio usado no cálculo", "#176452", "solid"),
+    ):
+        figura_angulos.add_trace(
+            go.Scatter(
+                x=numeros_fatias,
+                y=[fatia[campo] for fatia in fatias],
+                mode="lines+markers",
+                name=nome,
+                line={"color": cor, "width": 2, "dash": estilo},
+                marker={"size": 6},
+                hovertemplate="Fatia %{x}<br>" + nome + ": %{y:.2f}°<extra></extra>",
+            )
+        )
+    figura_angulos.add_hline(y=0, line_color="#829096", line_dash="dash", line_width=1)
+    figura_angulos.update_layout(
+        title="Inclinação da base de cada fatia",
+        height=420,
+        margin={"l": 18, "r": 18, "t": 55, "b": 35},
+        xaxis_title="Número da fatia, da saída à entrada",
+        yaxis_title="Ângulo da base α (°)",
+        hovermode="x unified",
+        legend={"orientation": "h", "y": -0.25},
+        paper_bgcolor="white",
+        plot_bgcolor="white",
+    )
+    figura_angulos.update_xaxes(dtick=1)
+    st.plotly_chart(
+        figura_angulos,
+        width="stretch",
+        theme=None,
+        config=_configuracao_download_png("angulos_das_fatias"),
+    )
+
+
+def _mostrar_grafico_componentes_normais(fatias: list[dict[str, Any]]) -> None:
+    numeros_fatias = [fatia["numero_fatia"] for fatia in fatias]
+    figura_normais = go.Figure()
+    for campo, nome, cor in (
+        ("forca_normal_total_kN_m", "W cos α · normal total", "#58758a"),
+        ("resultante_pressao_neutra_kN_m", "u ΔL · efeito da água", "#3e8dc1"),
+        ("forca_normal_efetiva_kN_m", "N′ · normal efetiva", "#176452"),
+    ):
+        valores = [fatia[campo] for fatia in fatias]
+        cores = (
+            ["#c34b3c" if valor is not None and valor < 0 else cor for valor in valores]
+            if campo == "forca_normal_efetiva_kN_m"
+            else cor
+        )
+        figura_normais.add_trace(
+            go.Bar(
+                x=numeros_fatias,
+                y=valores,
+                name=nome,
+                marker_color=cores,
+                hovertemplate="Fatia %{x}<br>" + nome + ": %{y:.2f} kN/m<extra></extra>",
+            )
+        )
+    figura_normais.update_layout(
+        title="Como a água altera a força normal em cada fatia",
+        height=440,
+        margin={"l": 18, "r": 18, "t": 55, "b": 35},
+        barmode="group",
+        xaxis_title="Número da fatia, da saída à entrada",
+        yaxis_title="Força (kN/m)",
+        hovermode="x unified",
+        legend={"orientation": "h", "y": -0.25},
+        paper_bgcolor="white",
+        plot_bgcolor="white",
+    )
+    figura_normais.update_xaxes(dtick=1)
+    figura_normais.add_hline(y=0, line_color="#829096", line_dash="dash", line_width=1)
+    st.plotly_chart(
+        figura_normais,
+        width="stretch",
+        theme=None,
+        config=_configuracao_download_png("componentes_forca_normal"),
+    )
+
+
+def _mostrar_grafico_forcas_por_fatia(fatias: list[dict[str, Any]]) -> None:
+    numeros_fatias = [fatia["numero_fatia"] for fatia in fatias]
+    valores_mobilizados = [fatia["forca_mobilizada_kN_m"] for fatia in fatias]
+    figura_forcas = go.Figure()
+    figura_forcas.add_trace(
+        go.Bar(
+            x=numeros_fatias,
+            y=[fatia["forca_resistente_kN_m"] for fatia in fatias],
+            name="F_R · força resistente",
+            marker_color="#176452",
+            hovertemplate="Fatia %{x}<br>F_R: %{y:.2f} kN/m<extra></extra>",
+        )
+    )
+    figura_forcas.add_trace(
+        go.Bar(
+            x=numeros_fatias,
+            y=valores_mobilizados,
+            name="F_mob · força mobilizada",
+            marker_color=[
+                "#c34b3c" if valor < 0 else "#d99028" for valor in valores_mobilizados
+            ],
+            hovertemplate="Fatia %{x}<br>F_mob: %{y:.2f} kN/m<extra></extra>",
+        )
+    )
+    figura_forcas.update_layout(
+        title="Forças resistentes e mobilizadas por fatia",
+        height=440,
+        margin={"l": 18, "r": 18, "t": 55, "b": 35},
+        barmode="group",
+        xaxis_title="Número da fatia, da saída à entrada",
+        yaxis_title="Força (kN/m)",
+        hovermode="x unified",
+        legend={"orientation": "h", "y": -0.25},
+        paper_bgcolor="white",
+        plot_bgcolor="white",
+    )
+    figura_forcas.update_xaxes(dtick=1)
+    figura_forcas.add_hline(y=0, line_color="#829096", line_dash="dash", line_width=1)
+    st.plotly_chart(
+        figura_forcas,
+        width="stretch",
+        theme=None,
+        config=_configuracao_download_png("forcas_por_fatia"),
+    )
 
 
 def _mostrar_tabela_fatias(fatias: list[dict[str, Any]]) -> None:
-    nomes_colunas = {
-        "numero_fatia": "Fatia",
-        "x_inicial_m": "x₁ (m)",
-        "x_final_m": "x₂ (m)",
-        "x_medio_m": "x médio (m)",
-        "cota_topo_m": "Cota topo (m)",
-        "cota_base_m": "Cota base no centro (m)",
-        "angulo_base_inicial_graus": "α₁ (°)",
-        "angulo_base_final_graus": "α₂ (°)",
-        "variacao_angular_rad": "Δα (rad)",
-        "comprimento_arco_m": "ΔL (m)",
-        "angulo_base_medio_graus": "α médio (°)",
-        "comprimento_camada_superior_m": "L camada 1 (m)",
-        "comprimento_camada_inferior_m": "L camada 2 (m)",
-        "area_camada_superior_nao_saturada_m2": "A₁ não saturada (m²)",
-        "area_camada_superior_saturada_m2": "A₁ saturada (m²)",
-        "area_camada_inferior_nao_saturada_m2": "A₂ não saturada (m²)",
-        "area_camada_inferior_saturada_m2": "A₂ saturada (m²)",
-        "peso_fatia_kN_m": "Peso W (kN/m)",
-        "pressao_neutra_kPa": "u (kPa)",
-        "forca_normal_efetiva_kN_m": "N′ (kN/m)",
-        "forca_resistente_kN_m": "F resistente (kN/m)",
-        "forca_mobilizada_kN_m": "F mobilizada (kN/m)",
-        "situacao": "Situação",
-    }
-    linhas_tabela = [
-        {nomes_colunas[campo]: fatia[campo] for campo in nomes_colunas} for fatia in fatias
+    tabelas = (
+        (
+            "Posição",
+            "x é medido na horizontal, com origem no pé do talude; as cotas são medidas a partir do pé.",
+            {
+                "numero_fatia": "Fatia",
+                "x_inicial_m": "x inicial (m)",
+                "x_final_m": "x final (m)",
+                "x_medio_m": "x médio (m)",
+                "cota_topo_m": "Cota do terreno (m)",
+                "cota_base_m": "Cota da base no meio (m)",
+            },
+        ),
+        (
+            "Ângulos e base",
+            "α₁ e α₂ são os ângulos no começo e no fim da base; ΔL é o comprimento curvo da base.",
+            {
+                "numero_fatia": "Fatia",
+                "angulo_base_inicial_graus": "α₁ · início (°)",
+                "angulo_base_final_graus": "α₂ · fim (°)",
+                "angulo_base_medio_graus": "α médio (°)",
+                "variacao_angular_rad": "Δα (rad)",
+                "comprimento_arco_m": "ΔL · arco da base (m)",
+                "comprimento_camada_superior_m": "L₁ · base na camada 1 (m)",
+                "comprimento_camada_inferior_m": "L₂ · base na camada 2 (m)",
+            },
+        ),
+        (
+            "Áreas e peso",
+            "A₁/A₂ são áreas dentro de cada camada; W soma o peso do solo e a sobrecarga daquela fatia.",
+            {
+                "numero_fatia": "Fatia",
+                "area_camada_superior_nao_saturada_m2": "A₁ não saturada (m²)",
+                "area_camada_superior_saturada_m2": "A₁ saturada (m²)",
+                "area_camada_inferior_nao_saturada_m2": "A₂ não saturada (m²)",
+                "area_camada_inferior_saturada_m2": "A₂ saturada (m²)",
+                "sobrecarga_fatia_kN_m": "q · largura na fatia (kN/m)",
+                "peso_fatia_kN_m": "W · peso total (kN/m)",
+            },
+        ),
+        (
+            "Forças",
+            "As forças são por metro de largura do talude. ‘—’ significa que aquela parcela não é calculada.",
+            {
+                "numero_fatia": "Fatia",
+                "forca_normal_total_kN_m": "W cos α (kN/m)",
+                "pressao_neutra_kPa": "u · pressão da água (kPa)",
+                "resultante_pressao_neutra_kN_m": "u ΔL (kN/m)",
+                "forca_normal_efetiva_kN_m": "N′ (N-linha) · normal efetiva (kN/m)",
+                "forca_resistente_coesao_kN_m": "Parcela de coesão (kN/m)",
+                "forca_resistente_atrito_kN_m": "Parcela de atrito (kN/m)",
+                "forca_resistente_kN_m": "F_R · resistente (kN/m)",
+                "forca_mobilizada_kN_m": "F_mob · mobilizada (kN/m)",
+                "situacao": "Situação da fatia",
+            },
+        ),
+    )
+    abas_tabela = st.tabs([titulo for titulo, _, _ in tabelas])
+    for aba, (_, explicacao, nomes_colunas) in zip(abas_tabela, tabelas):
+        with aba:
+            st.caption(explicacao)
+            linhas_tabela = [
+                {nome_coluna: fatia.get(campo) for campo, nome_coluna in nomes_colunas.items()}
+                for fatia in fatias
+            ]
+            st.dataframe(linhas_tabela, hide_index=True, width="stretch", height=440)
+
+
+def _mostrar_diagnostico_circulo(circulo: dict[str, Any]) -> None:
+    if circulo["situacao"] == "VÁLIDO":
+        return
+
+    fatias = circulo["fatias"]
+    fatias_normais_negativas = [
+        fatia for fatia in fatias if fatia["situacao"] == "N EFETIVA NEGATIVA"
     ]
-    st.dataframe(linhas_tabela, hide_index=True, width="stretch", height=440)
+    st.warning(
+        f"O {circulo['identificacao']} não tem FS válido: {circulo['situacao']}. "
+        "Veja o motivo antes de comparar este círculo com os válidos."
+    )
+    if circulo["situacao"] == "RAIO < d/2":
+        st.info("Para passar pelos pontos de entrada e saída, o raio precisa ser pelo menos d/2.")
+    elif circulo["situacao"] == "FORA DO MACIÇO":
+        numeros_fatias_fora = [
+            str(fatia["numero_fatia"])
+            for fatia in fatias
+            if fatia["situacao"] == "FORA DO MACIÇO"
+        ]
+        st.info(
+            "A superfície ficou acima do terreno ou fora do solo nas fatias: "
+            + (", ".join(numeros_fatias_fora) if numeros_fatias_fora else "geometria do círculo")
+            + "."
+        )
+    elif circulo["situacao"] == "Fmob ≤ 0":
+        st.info("A soma assinada das forças mobilizadas não é positiva; o FS não é definido nesse sentido.")
+    if fatias_normais_negativas:
+        lista_fatias = ", ".join(str(fatia["numero_fatia"]) for fatia in fatias_normais_negativas)
+        quantidade_fatias_validas = sum(fatia["situacao"] == "OK" for fatia in fatias)
+        resistencia_parcial = circulo["soma_forcas_resistentes_diagnostica_kN_m"]
+        mobilizacao_diagnostica = circulo["soma_forcas_mobilizadas_diagnostica_kN_m"]
+        st.info(
+            f"N′ (lido ‘N linha’) ficou negativo. Fatias afetadas: {lista_fatias}. "
+            "A conta exigiria tração na base, que o solo não resiste. "
+            "Por isso a planilha e o Python deixam o FS em branco."
+        )
+        for fatia in fatias_normais_negativas:
+            st.write(
+                f"Fatia {fatia['numero_fatia']}: W cos α = "
+                f"{_formatar_numero(fatia['forca_normal_total_kN_m'], 2)} − u ΔL = "
+                f"{_formatar_numero(fatia['resultante_pressao_neutra_kN_m'], 2)} = "
+                f"N′ = {_formatar_numero(fatia['forca_normal_efetiva_kN_m'], 2)} kN/m; "
+                f"F_R não calculada; F_mob = "
+                f"{_formatar_numero(fatia['forca_mobilizada_kN_m'], 2)} kN/m."
+            )
+        st.caption(
+            f"Só para diagnóstico: ΣF_R das {quantidade_fatias_validas} fatias válidas = "
+            f"{_formatar_numero(resistencia_parcial, 2)} kN/m; ΣF_mob das {len(fatias)} fatias = "
+            f"{_formatar_numero(mobilizacao_diagnostica, 2)} kN/m. "
+            "Como as somas usam conjuntos diferentes de fatias, a divisão não é um FS válido."
+        )
 
 
 def _mostrar_memoria_calculo() -> None:
-    with st.expander("Equações e hipóteses da memória de cálculo"):
+    with st.expander("Guia de símbolos e equações"):
+        st.markdown(
+            "**Geometria:** H é a altura; H:V é a relação horizontal/vertical da face; "
+            "β é a inclinação do terreno a montante; a é a distância da crista até a entrada; "
+            "Lb é a distância do pé até a saída; xE e yE são as coordenadas da entrada; "
+            "R é o raio; d é a distância entre entrada e saída."
+        )
+        st.markdown(
+            "**Solo e água:** h₁ é a espessura da camada 1; γ é o peso específico natural ou saturado; "
+            "c′ é a coesão efetiva; φ′ é o ângulo de atrito efetivo; q é a sobrecarga; "
+            "zNA é a profundidade do N.A. abaixo da crista."
+        )
+        st.markdown(
+            "**Como ler as colunas:** W é o peso da fatia; α é a inclinação da base; "
+            "u é a pressão da água na base; ΔL é o comprimento curvo da base; "
+            "L₁ e L₂ são os trechos da base em cada camada. Todas as forças são por metro de largura."
+        )
+        st.markdown(
+            "**N′ (N linha):** força normal efetiva na base, depois de descontar a água. "
+            "**F_R:** força resistente, formada pelas parcelas de coesão e atrito. "
+            "**F_mob:** força que tende a movimentar a fatia. FS só é exibido quando todas as fatias do círculo são válidas."
+        )
         st.markdown("**Geometria e divisão em fatias**")
         st.latex(r"x_E = (H:V)\,H+a \qquad d=\sqrt{(x_E+L_b)^2+y_E^2}")
-        st.latex(r"\Delta\alpha_i=|\alpha_{2,i}-\alpha_{1,i}| \qquad \Delta L_i=R\,\Delta\alpha_i")
-        st.markdown("**Peso e resistência em cada fatia**")
-        st.latex(r"W_i=\sum_j(\gamma_{j,nat}A_{j,nat}+\gamma_{j,sat}A_{j,sat})+q\,b_q")
-        st.latex(r"N'_i=W_i\cos\alpha_i-u_i\Delta L_i \qquad u_i=\gamma_w\max(0;H-z_{NA}-y_{base,i})")
-        st.latex(r"F_{R,i}=c'_1L_{1,i}+c'_2L_{2,i}+N'_i\left(\frac{L_{1,i}}{\Delta L_i}\tan\varphi'_1+\frac{L_{2,i}}{\Delta L_i}\tan\varphi'_2\right)")
-        st.latex(r"F_{mob,i}=W_i\sin\alpha_i \qquad FS=\frac{\sum_i F_{R,i}}{\sum_i F_{mob,i}}")
+        st.latex(r"\alpha_{1,i}=\sin^{-1}\!\left(\frac{x_{1,i}-x_c}{R}\right) \qquad \alpha_{2,i}=\sin^{-1}\!\left(\frac{x_{2,i}-x_c}{R}\right)")
+        st.latex(r"\alpha_i=\frac{\alpha_{1,i}+\alpha_{2,i}}{2} \qquad \Delta\alpha_i=|\operatorname{rad}(\alpha_{2,i}-\alpha_{1,i})| \qquad \Delta L_i=R\,\Delta\alpha_i")
+        st.markdown("**Peso e força normal**")
+        st.latex(r"W_i=\sum_j(\gamma_{j,nat}A_{j,nat}+\gamma_{j,sat}A_{j,sat})+q\,b_{q,i}")
+        st.latex(r"y_{NA}=H-z_{NA} \qquad u_i=\gamma_w\max(0;y_{NA}-y_{base,i})")
+        st.latex(r"N'_i=W_i\cos\alpha_i-u_i\Delta L_i")
+        st.markdown("**Resistência, movimento e fator de segurança**")
+        st.latex(r"F_{coesao,i}=c'_1L_{1,i}+c'_2L_{2,i}")
+        st.latex(r"F_{atrito,i}=N'_i\left(\frac{L_{1,i}}{\Delta L_i}\tan\varphi'_1+\frac{L_{2,i}}{\Delta L_i}\tan\varphi'_2\right)")
+        st.latex(r"F_{R,i}=F_{coesao,i}+F_{atrito,i} \qquad F_{mob,i}=W_i\sin\alpha_i")
+        st.latex(r"FS=\frac{\sum_i F_{R,i}}{\sum_i F_{mob,i}}")
         st.markdown(
-            "Os círculos passam pelo ponto de saída informado e pelo ponto de entrada calculado. "
-            "A planilha usa dez raios candidatos a partir de d/2; os raios podem ser editados. "
+            "O sinal de α é mantido na força mobilizada. Se N′ ficar negativo em uma fatia, "
+            "o círculo é marcado como inválido e não recebe FS, como na aba Talude da planilha. "
             "O N.A. é horizontal; deixe o campo vazio para não considerar água."
         )
 
@@ -543,9 +832,10 @@ else:
     circulo_critico = resultado_talude["circulo_critico"]
     opcoes_circulos = ["Crítico"] + [circulo["identificacao"] for circulo in circulos]
     identificacao_desenho = st.selectbox(
-        "Círculo a desenhar",
+        "Círculo para analisar",
         opcoes_circulos,
         key="identificacao_circulo_desenho_talude",
+        help="Escolha um candidato para ver seu perfil, suas fatias e os motivos de invalidação.",
     )
     if identificacao_desenho == "Crítico":
         circulo_desenhado = circulo_critico
@@ -564,14 +854,18 @@ else:
             "Raio R (m)": circulo["raio_m"],
             "Centro x_c (m)": circulo["centro_x_m"],
             "Centro y_c (m)": circulo["centro_y_m"],
-            "FS": circulo["fator_seguranca"],
-            "Σ F resistente (kN/m)": circulo["resistencia_total_kN_m"],
-            "Σ F mobilizada (kN/m)": circulo["forca_mobilizada_total_kN_m"],
+            "FS · Fellenius": _formatar_numero(circulo["fator_seguranca"], 3),
+            "Σ F_R válida (kN/m)": _formatar_numero(circulo["resistencia_total_kN_m"], 2),
+            "Σ F_mob válida (kN/m)": _formatar_numero(circulo["forca_mobilizada_total_kN_m"], 2),
             "Situação": circulo["situacao"],
         }
         for circulo in circulos
     ]
     st.dataframe(linhas_circulos, hide_index=True, width="stretch")
+    st.caption(
+        "Só círculos com situação VÁLIDO recebem FS e somatórios totais. "
+        "Selecione um círculo inválido para ver a fatia e o motivo; ele não entra no gráfico FS × raio."
+    )
 
     if circulo_critico:
         colunas_resultado = st.columns(4)
@@ -590,17 +884,18 @@ else:
     else:
         st.warning("Nenhum dos raios candidatos produziu um círculo válido. Ajuste os raios ou a geometria.")
 
-    colunas_graficos = st.columns([1.55, 1])
-    with colunas_graficos[0]:
+    if circulo_desenhado:
+        _mostrar_diagnostico_circulo(circulo_desenhado)
+        st.subheader(f"Perfil e círculo · {circulo_desenhado['identificacao']}")
         _mostrar_grafico_geometria(entradas_talude, resultado_talude, circulo_desenhado)
-        if circulo_desenhado and circulo_desenhado["situacao"] != "VÁLIDO":
-            st.info(
-                f"O círculo {circulo_desenhado['identificacao']} está marcado como "
-                f"{circulo_desenhado['situacao']} e não entra no FS crítico."
-            )
-    with colunas_graficos[1]:
+
+        st.subheader("Fator de segurança por raio")
+        st.caption(
+            "Cada ponto representa um dos raios candidatos válidos; o gráfico não liga os pontos "
+            "porque são círculos discretos, não uma curva contínua. Passe o mouse no gráfico para baixar PNG."
+        )
         limite_fs_grafico = st.slider(
-            "FS máximo do gráfico", min_value=1.0, max_value=20.0, value=5.0, step=0.5
+            "Limite superior do eixo FS", min_value=1.0, max_value=20.0, value=5.0, step=0.5
         )
         _mostrar_grafico_fator_raio(
             circulos,
@@ -608,9 +903,30 @@ else:
             limite_fs_grafico,
         )
 
-    if circulo_desenhado:
-        st.subheader(f"Detalhamento por fatia · {circulo_desenhado['identificacao']}")
-        _mostrar_tabela_fatias(circulo_desenhado["fatias"])
+        if circulo_desenhado["fatias"]:
+            st.subheader(f"Gráficos por fatia · {circulo_desenhado['identificacao']}")
+            st.caption(
+                "Cada gráfico mostra uma parte do cálculo. Use o ícone de câmera ao passar o mouse "
+                "sobre qualquer gráfico para baixar sua imagem PNG."
+            )
+            with st.expander("Ângulos e forças em gráficos separados", expanded=False):
+                st.markdown("**Ângulos da base**")
+                st.caption("α₁ e α₂ marcam o início e o fim da base; α médio é usado nas forças.")
+                _mostrar_grafico_angulos(circulo_desenhado["fatias"])
+                st.markdown("**Componentes da força normal**")
+                st.caption("N′ = W cos α − u ΔL. Barras vermelhas indicam N′ negativo.")
+                _mostrar_grafico_componentes_normais(circulo_desenhado["fatias"])
+                st.markdown("**Forças resistentes e mobilizadas**")
+                st.caption(
+                    "F_R resiste ao movimento; F_mob tende a movimentar a fatia. "
+                    "F_mob negativa aparece em vermelho e atua contra o sentido adotado."
+                )
+                _mostrar_grafico_forcas_por_fatia(circulo_desenhado["fatias"])
+
+            st.subheader(f"Memória das fatias · {circulo_desenhado['identificacao']}")
+            _mostrar_tabela_fatias(circulo_desenhado["fatias"])
+        else:
+            st.info("Este raio é menor que d/2; não existe círculo para dividir em fatias.")
     _mostrar_memoria_calculo()
     st.caption(
         "Escopo: ruptura circular por Fellenius, N.A. horizontal e até duas camadas. "

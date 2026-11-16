@@ -305,6 +305,8 @@ def _calcular_circulo(
             "fator_seguranca": None,
             "resistencia_total_kN_m": None,
             "forca_mobilizada_total_kN_m": None,
+            "soma_forcas_resistentes_diagnostica_kN_m": None,
+            "soma_forcas_mobilizadas_diagnostica_kN_m": None,
             "situacao": "RAIO < d/2",
             "fatias": [],
         }
@@ -324,17 +326,24 @@ def _calcular_circulo(
     fatias = _criar_fatias(entradas_talude, geometria, centro_x_m, centro_y_m, raio_m)
 
     situacoes_fatias = {fatia["situacao"] for fatia in fatias}
-    resistencia_total_kN_m = sum(
+    soma_forcas_resistentes_diagnostica_kN_m = sum(
         fatia["forca_resistente_kN_m"] or 0.0 for fatia in fatias
     )
-    forca_mobilizada_total_kN_m = sum(
+    soma_forcas_mobilizadas_diagnostica_kN_m = sum(
         fatia["forca_mobilizada_kN_m"] for fatia in fatias
     )
+    fatias_com_normal_efetiva_negativa = [
+        fatia["numero_fatia"]
+        for fatia in fatias
+        if fatia["situacao"] == "N EFETIVA NEGATIVA"
+    ]
     if "FORA DO MACIÇO" in situacoes_fatias:
         situacao = "FORA DO MACIÇO"
-    elif "N EFETIVA NEGATIVA" in situacoes_fatias:
-        situacao = "N′ < 0"
-    elif forca_mobilizada_total_kN_m <= 0.001:
+    elif fatias_com_normal_efetiva_negativa:
+        numeros_fatias = ", ".join(map(str, fatias_com_normal_efetiva_negativa))
+        complemento = "na fatia" if len(fatias_com_normal_efetiva_negativa) == 1 else "nas fatias"
+        situacao = f"N′ < 0 {complemento} {numeros_fatias}"
+    elif soma_forcas_mobilizadas_diagnostica_kN_m <= 0.001:
         situacao = "Fmob ≤ 0"
     elif len(fatias) != int(entradas_talude["quantidade_fatias"]):
         situacao = "REVER FATIAS"
@@ -342,7 +351,8 @@ def _calcular_circulo(
         situacao = "VÁLIDO"
 
     fator_seguranca = (
-        resistencia_total_kN_m / forca_mobilizada_total_kN_m
+        soma_forcas_resistentes_diagnostica_kN_m
+        / soma_forcas_mobilizadas_diagnostica_kN_m
         if situacao == "VÁLIDO"
         else None
     )
@@ -354,8 +364,18 @@ def _calcular_circulo(
         "centro_x_m": centro_x_m,
         "centro_y_m": centro_y_m,
         "fator_seguranca": fator_seguranca,
-        "resistencia_total_kN_m": resistencia_total_kN_m,
-        "forca_mobilizada_total_kN_m": forca_mobilizada_total_kN_m,
+        "resistencia_total_kN_m": (
+            soma_forcas_resistentes_diagnostica_kN_m if situacao == "VÁLIDO" else None
+        ),
+        "forca_mobilizada_total_kN_m": (
+            soma_forcas_mobilizadas_diagnostica_kN_m if situacao == "VÁLIDO" else None
+        ),
+        "soma_forcas_resistentes_diagnostica_kN_m": (
+            soma_forcas_resistentes_diagnostica_kN_m
+        ),
+        "soma_forcas_mobilizadas_diagnostica_kN_m": (
+            soma_forcas_mobilizadas_diagnostica_kN_m
+        ),
         "situacao": situacao,
         "fatias": fatias,
     }
@@ -460,18 +480,27 @@ def _criar_fatias(
         comprimento_camada_superior_m = max(
             0.0, comprimento_arco_m - comprimento_camada_inferior_m
         )
+        forca_normal_total_kN_m = peso_fatia_kN_m * math.cos(angulo_medio_rad)
+        resultante_pressao_neutra_kN_m = pressao_neutra_kPa * comprimento_arco_m
         forca_normal_efetiva_kN_m = (
-            peso_fatia_kN_m * math.cos(angulo_medio_rad)
-            - pressao_neutra_kPa * comprimento_arco_m
+            forca_normal_total_kN_m - resultante_pressao_neutra_kN_m
         )
         if forca_normal_efetiva_kN_m < 0:
             situacao_fatia = "N EFETIVA NEGATIVA"
+            forca_resistente_coesao_kN_m = None
+            forca_resistente_atrito_kN_m = None
             forca_resistente_kN_m = None
         else:
             situacao_fatia = "OK"
             fracao_camada_superior = comprimento_camada_superior_m / comprimento_arco_m
             fracao_camada_inferior = comprimento_camada_inferior_m / comprimento_arco_m
-            resistencia_atrito = forca_normal_efetiva_kN_m * (
+            forca_resistente_coesao_kN_m = (
+                float(entradas_talude["coesao_efetiva_camada_superior_kPa"])
+                * comprimento_camada_superior_m
+                + float(entradas_talude["coesao_efetiva_camada_inferior_kPa"])
+                * comprimento_camada_inferior_m
+            )
+            forca_resistente_atrito_kN_m = forca_normal_efetiva_kN_m * (
                 fracao_camada_superior
                 * math.tan(
                     math.radians(
@@ -486,11 +515,7 @@ def _criar_fatias(
                 )
             )
             forca_resistente_kN_m = (
-                float(entradas_talude["coesao_efetiva_camada_superior_kPa"])
-                * comprimento_camada_superior_m
-                + float(entradas_talude["coesao_efetiva_camada_inferior_kPa"])
-                * comprimento_camada_inferior_m
-                + resistencia_atrito
+                forca_resistente_coesao_kN_m + forca_resistente_atrito_kN_m
             )
 
         fatias.append(
@@ -509,9 +534,14 @@ def _criar_fatias(
                 "comprimento_camada_superior_m": comprimento_camada_superior_m,
                 "comprimento_camada_inferior_m": comprimento_camada_inferior_m,
                 **areas,
+                "sobrecarga_fatia_kN_m": sobrecarga_fatia_kN_m,
                 "peso_fatia_kN_m": peso_fatia_kN_m,
                 "pressao_neutra_kPa": pressao_neutra_kPa,
+                "forca_normal_total_kN_m": forca_normal_total_kN_m,
+                "resultante_pressao_neutra_kN_m": resultante_pressao_neutra_kN_m,
                 "forca_normal_efetiva_kN_m": forca_normal_efetiva_kN_m,
+                "forca_resistente_coesao_kN_m": forca_resistente_coesao_kN_m,
+                "forca_resistente_atrito_kN_m": forca_resistente_atrito_kN_m,
                 "forca_resistente_kN_m": forca_resistente_kN_m,
                 "forca_mobilizada_kN_m": peso_fatia_kN_m * math.sin(angulo_medio_rad),
                 "situacao": situacao_fatia,
@@ -676,9 +706,14 @@ def _fatia_fora(
         "area_camada_superior_saturada_m2": 0.0,
         "area_camada_inferior_nao_saturada_m2": 0.0,
         "area_camada_inferior_saturada_m2": 0.0,
+        "sobrecarga_fatia_kN_m": 0.0,
         "peso_fatia_kN_m": 0.0,
         "pressao_neutra_kPa": 0.0,
+        "forca_normal_total_kN_m": None,
+        "resultante_pressao_neutra_kN_m": None,
         "forca_normal_efetiva_kN_m": None,
+        "forca_resistente_coesao_kN_m": None,
+        "forca_resistente_atrito_kN_m": None,
         "forca_resistente_kN_m": None,
         "forca_mobilizada_kN_m": 0.0,
         "situacao": "FORA DO MACIÇO",
