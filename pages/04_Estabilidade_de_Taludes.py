@@ -185,12 +185,11 @@ def _mostrar_grafico_geometria(
         go.Scatter(
             x=[x_saida_m, comprimento_horizontal_face_m, x_entrada_m],
             y=[0.0, float(entradas_talude["altura_talude_m"]), resultado_talude["geometria"]["cota_entrada_m"]],
-            mode="markers+text",
+            mode="markers",
             marker={"color": ["#c34b3c", "#17374c", "#c34b3c"], "size": 9},
-            text=["Saída", "Crista", "Entrada"],
-            textposition=["bottom left", "top center", "top right"],
-            name="Pontos do perfil",
-            hovertemplate="%{text}<br>x = %{x:.2f} m<br>y = %{y:.2f} m<extra></extra>",
+            hovertext=["Saída", "Crista", "Entrada"],
+            name="Pontos principais",
+            hovertemplate="%{hovertext}<br>x = %{x:.2f} m<br>y = %{y:.2f} m<extra></extra>",
         )
     )
 
@@ -252,11 +251,10 @@ def _mostrar_grafico_geometria(
             go.Scatter(
                 x=[coordenadas_centro_x],
                 y=[coordenadas_centro_y],
-                mode="markers+text",
+                mode="markers",
                 marker={"color": "#17374c", "size": 9, "symbol": "x"},
-                text=["C"],
-                textposition="top center",
-                name="Centro do círculo",
+                name="Centro C",
+                hovertemplate="Centro C<br>x = %{x:.2f} m<br>y = %{y:.2f} m<extra></extra>",
             )
         )
 
@@ -270,10 +268,16 @@ def _mostrar_grafico_geometria(
     figura_geometria.update_layout(
         title="Perfil, camadas, nível d’água e círculo selecionado",
         height=620,
-        margin={"l": 18, "r": 18, "t": 55, "b": 35},
+        margin={"l": 55, "r": 25, "t": 65, "b": 175},
         xaxis_title="Distância horizontal x (m), origem no pé do talude",
         yaxis_title="Cota y (m)",
-        legend={"orientation": "h", "y": -0.28},
+        legend={
+            "orientation": "h",
+            "x": 0,
+            "xanchor": "left",
+            "y": -0.28,
+            "yanchor": "top",
+        },
         hovermode="closest",
         paper_bgcolor="white",
         plot_bgcolor="white",
@@ -309,34 +313,27 @@ def _mostrar_grafico_fator_raio(
         key=lambda circulo: circulo["raio_m"],
     )
     figura_fs_raio = go.Figure()
+    cores_pontos = [
+        "#c34b3c" if circulo["identificacao"] == identificacao_critica else "#176452"
+        for circulo in circulos_validos
+    ]
+    textos_pontos = [
+        f"{circulo['identificacao']} · crítico"
+        if circulo["identificacao"] == identificacao_critica
+        else circulo["identificacao"]
+        for circulo in circulos_validos
+    ]
     figura_fs_raio.add_trace(
         go.Scatter(
             x=[circulo["raio_m"] for circulo in circulos_validos],
             y=[circulo["fator_seguranca"] for circulo in circulos_validos],
             mode="markers",
-            marker={"color": "#176452", "size": 10, "line": {"color": "white", "width": 1}},
-            text=[circulo["identificacao"] for circulo in circulos_validos],
+            marker={"color": cores_pontos, "size": 10, "line": {"color": "white", "width": 1}},
+            text=textos_pontos,
             name="Círculos válidos",
             hovertemplate="%{text}<br>R = %{x:.3f} m<br>FS = %{y:.3f}<extra></extra>",
         )
     )
-    if identificacao_critica:
-        circulo_critico = next(
-            circulo
-            for circulo in circulos_validos
-            if circulo["identificacao"] == identificacao_critica
-        )
-        figura_fs_raio.add_trace(
-            go.Scatter(
-                x=[circulo_critico["raio_m"]],
-                y=[circulo_critico["fator_seguranca"]],
-                mode="markers+text",
-                marker={"color": "#c34b3c", "size": 13},
-                text=["Crítico"],
-                textposition="top center",
-                name="Círculo crítico",
-            )
-        )
     figura_fs_raio.update_layout(
         title="Comparação do fator de segurança por raio",
         height=440,
@@ -359,32 +356,52 @@ def _mostrar_grafico_fator_raio(
 
 def _mostrar_grafico_angulos(fatias: list[dict[str, Any]]) -> None:
     numeros_fatias = [fatia["numero_fatia"] for fatia in fatias]
+    angulos_iniciais = [fatia["angulo_base_inicial_graus"] for fatia in fatias]
+    angulos_finais = [fatia["angulo_base_final_graus"] for fatia in fatias]
     figura_angulos = go.Figure()
-    for campo, nome, cor, estilo in (
-        ("angulo_base_inicial_graus", "α₁ · início da base", "#58758a", "dot"),
-        ("angulo_base_final_graus", "α₂ · fim da base", "#d99028", "dot"),
-        ("angulo_base_medio_graus", "α médio usado no cálculo", "#176452", "solid"),
-    ):
-        figura_angulos.add_trace(
-            go.Scatter(
-                x=numeros_fatias,
-                y=[fatia[campo] for fatia in fatias],
-                mode="lines+markers",
-                name=nome,
-                line={"color": cor, "width": 2, "dash": estilo},
-                marker={"size": 6},
-                hovertemplate="Fatia %{x}<br>" + nome + ": %{y:.2f}°<extra></extra>",
-            )
+    figura_angulos.add_trace(
+        go.Scatter(
+            x=numeros_fatias,
+            y=angulos_iniciais,
+            mode="lines",
+            line={"width": 0},
+            showlegend=False,
+            hoverinfo="skip",
         )
+    )
+    figura_angulos.add_trace(
+        go.Scatter(
+            x=numeros_fatias,
+            y=angulos_finais,
+            mode="lines",
+            line={"color": "#d99028", "width": 1},
+            fill="tonexty",
+            fillcolor="rgba(217, 144, 40, 0.18)",
+            name="Faixa entre α₁ e α₂",
+            customdata=list(zip(angulos_iniciais, angulos_finais)),
+            hovertemplate="Fatia %{x}<br>α₁: %{customdata[0]:.2f}°<br>α₂: %{customdata[1]:.2f}°<extra></extra>",
+        )
+    )
+    figura_angulos.add_trace(
+        go.Scatter(
+            x=numeros_fatias,
+            y=[fatia["angulo_base_medio_graus"] for fatia in fatias],
+            mode="lines+markers",
+            name="α médio usado no cálculo",
+            line={"color": "#176452", "width": 3},
+            marker={"size": 7},
+            hovertemplate="Fatia %{x}<br>α médio: %{y:.2f}°<extra></extra>",
+        )
+    )
     figura_angulos.add_hline(y=0, line_color="#829096", line_dash="dash", line_width=1)
     figura_angulos.update_layout(
         title="Inclinação da base de cada fatia",
         height=420,
-        margin={"l": 18, "r": 18, "t": 55, "b": 35},
+        margin={"l": 55, "r": 25, "t": 55, "b": 120},
         xaxis_title="Número da fatia, da saída à entrada",
         yaxis_title="Ângulo da base α (°)",
-        hovermode="x unified",
-        legend={"orientation": "h", "y": -0.25},
+        hovermode="closest",
+        legend={"orientation": "h", "x": 0, "xanchor": "left", "y": -0.30, "yanchor": "top"},
         paper_bgcolor="white",
         plot_bgcolor="white",
     )
@@ -423,12 +440,12 @@ def _mostrar_grafico_componentes_normais(fatias: list[dict[str, Any]]) -> None:
     figura_normais.update_layout(
         title="Como a água altera a força normal em cada fatia",
         height=440,
-        margin={"l": 18, "r": 18, "t": 55, "b": 35},
+        margin={"l": 55, "r": 25, "t": 55, "b": 140},
         barmode="group",
         xaxis_title="Número da fatia, da saída à entrada",
         yaxis_title="Força (kN/m)",
-        hovermode="x unified",
-        legend={"orientation": "h", "y": -0.25},
+        hovermode="closest",
+        legend={"orientation": "h", "x": 0, "xanchor": "left", "y": -0.34, "yanchor": "top"},
         paper_bgcolor="white",
         plot_bgcolor="white",
     )
@@ -469,12 +486,12 @@ def _mostrar_grafico_forcas_por_fatia(fatias: list[dict[str, Any]]) -> None:
     figura_forcas.update_layout(
         title="Forças resistentes e mobilizadas por fatia",
         height=440,
-        margin={"l": 18, "r": 18, "t": 55, "b": 35},
+        margin={"l": 55, "r": 25, "t": 55, "b": 120},
         barmode="group",
         xaxis_title="Número da fatia, da saída à entrada",
         yaxis_title="Força (kN/m)",
-        hovermode="x unified",
-        legend={"orientation": "h", "y": -0.25},
+        hovermode="closest",
+        legend={"orientation": "h", "x": 0, "xanchor": "left", "y": -0.30, "yanchor": "top"},
         paper_bgcolor="white",
         plot_bgcolor="white",
     )
@@ -892,7 +909,8 @@ else:
         st.subheader("Fator de segurança por raio")
         st.caption(
             "Cada ponto representa um dos raios candidatos válidos; o gráfico não liga os pontos "
-            "porque são círculos discretos, não uma curva contínua. Passe o mouse no gráfico para baixar PNG."
+            "porque são círculos discretos, não uma curva contínua. O ponto vermelho marca o círculo crítico. "
+            "Passe o mouse no gráfico para baixar PNG."
         )
         limite_fs_grafico = st.slider(
             "Limite superior do eixo FS", min_value=1.0, max_value=20.0, value=5.0, step=0.5
