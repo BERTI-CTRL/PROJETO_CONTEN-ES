@@ -132,20 +132,6 @@ def _mostrar_croqui_entrada_talude(
     if circulo and circulo.get("centro_x_m") is not None:
         y_min = min(y_min, min(_coordenadas_arco_y(circulo)) - altura * 0.05)
         y_max = max(y_max, float(circulo["centro_y_m"]) + altura * 0.05)
-    largura_svg, altura_svg = 800.0, 330.0
-    margem_x, margem_y = 48.0, 26.0
-    escala = min(
-        (largura_svg - 2 * margem_x) / max(x_max - x_min, 0.1),
-        (altura_svg - 2 * margem_y) / max(y_max - y_min, 0.1),
-    )
-    deslocamento_x = (largura_svg - (x_max - x_min) * escala) / 2
-    deslocamento_y = (altura_svg - (y_max - y_min) * escala) / 2
-
-    def sx(x: float) -> float:
-        return deslocamento_x + (x - x_min) * escala
-
-    def sy(y: float) -> float:
-        return altura_svg - deslocamento_y - (y - y_min) * escala
 
     def cota_terreno(x: float) -> float:
         if x <= 0:
@@ -156,91 +142,179 @@ def _mostrar_croqui_entrada_talude(
             math.radians(float(entradas_talude["inclinacao_terreno_montante_graus"]))
         )
 
-    amostras = 48
-    pontos = [
-        (
-            x_min + (x_max - x_min) * indice / amostras,
-            cota_terreno(x_min + (x_max - x_min) * indice / amostras),
-        )
-        for indice in range(amostras + 1)
-    ]
-    perfil_svg = " ".join(f"{sx(x):.1f},{sy(y):.1f}" for x, y in pontos)
-    poligono_solo = f"{sx(x_min):.1f},{sy(y_min):.1f} {perfil_svg} {sx(x_max):.1f},{sy(y_min):.1f}"
+    coordenadas_x = [x_min + (x_max - x_min) * indice / 80 for indice in range(81)]
+    coordenadas_y = [cota_terreno(x) for x in coordenadas_x]
     y_interface = float(geometria["cota_interface_camadas_m"])
-    superior = [(x, y) for x, y in pontos if y >= y_interface]
-    if superior:
-        poligono_superior = (
-            f"{sx(superior[0][0]):.1f},{sy(y_interface):.1f} "
-            + " ".join(f"{sx(x):.1f},{sy(y):.1f}" for x, y in superior)
-            + f" {sx(superior[-1][0]):.1f},{sy(y_interface):.1f}"
+    figura = go.Figure()
+    figura.add_trace(
+        go.Scatter(
+            x=[x_min, *coordenadas_x, x_max, x_min],
+            y=[y_min, *coordenadas_y, y_min, y_min],
+            mode="lines",
+            line={"width": 0},
+            fill="toself",
+            fillcolor="#f4ead8",
+            hoverinfo="skip",
+            showlegend=False,
         )
-    else:
-        poligono_superior = ""
-
-    elementos = [
-        f'<svg viewBox="0 0 {largura_svg:.0f} {altura_svg:.0f}" role="img" aria-label="Croqui esquemático da geometria do talude, camadas, nível d’água e fatias" style="width:100%;height:auto;background:#fff">',
-        f'<polygon points="{poligono_solo}" fill="#f4ead8"/>',
-    ]
-    if poligono_superior:
-        elementos.append(f'<polygon points="{poligono_superior}" fill="#dceaf0"/>')
-    elementos.extend(
-        [
-            f'<line x1="{sx(x_min):.1f}" y1="{sy(y_interface):.1f}" x2="{sx(x_max):.1f}" y2="{sy(y_interface):.1f}" stroke="#d99028" stroke-width="2" stroke-dasharray="7 5"/>',
-            f'<polyline points="{perfil_svg}" fill="none" stroke="#398e79" stroke-width="4" stroke-linejoin="round"/>',
-        ]
     )
+    cruzamentos_interface = []
+    for indice in range(len(coordenadas_x) - 1):
+        x1, x2 = coordenadas_x[indice], coordenadas_x[indice + 1]
+        y1, y2 = coordenadas_y[indice], coordenadas_y[indice + 1]
+        if (y1 - y_interface) * (y2 - y_interface) < 0:
+            cruzamentos_interface.append(
+                x1 + (y_interface - y1) * (x2 - x1) / (y2 - y1)
+            )
+    x_inicio_superior = (
+        cruzamentos_interface[0]
+        if coordenadas_y[0] < y_interface and cruzamentos_interface
+        else x_min
+    )
+    x_fim_superior = (
+        cruzamentos_interface[-1]
+        if coordenadas_y[-1] < y_interface and cruzamentos_interface
+        else x_max
+    )
+    indices_superior = [
+        indice
+        for indice, (x, y) in enumerate(zip(coordenadas_x, coordenadas_y))
+        if x_inicio_superior <= x <= x_fim_superior and y >= y_interface
+    ]
+    if indices_superior:
+        figura.add_trace(
+            go.Scatter(
+                x=[
+                    x_inicio_superior,
+                    *[coordenadas_x[i] for i in indices_superior],
+                    x_fim_superior,
+                    x_inicio_superior,
+                ],
+                y=[
+                    y_interface,
+                    *[coordenadas_y[i] for i in indices_superior],
+                    y_interface,
+                    y_interface,
+                ],
+                mode="lines",
+                line={"width": 0},
+                fill="toself",
+                fillcolor="#dceaf0",
+                hoverinfo="skip",
+                showlegend=False,
+            )
+        )
+
+    figura.add_trace(
+        go.Scatter(
+            x=coordenadas_x,
+            y=coordenadas_y,
+            mode="lines",
+            line={"color": "#398e79", "width": 3},
+            hoverinfo="skip",
+            showlegend=False,
+        )
+    )
+    figura.add_hline(y=y_interface, line_color="#d99028", line_width=1.5, line_dash="dash")
     cota_agua = geometria["cota_nivel_agua_m"]
     if cota_agua is not None:
-        elementos.append(
-            f'<line x1="{sx(x_min):.1f}" y1="{sy(float(cota_agua)):.1f}" x2="{sx(x_max):.1f}" y2="{sy(float(cota_agua)):.1f}" stroke="#438fbd" stroke-width="2" stroke-dasharray="8 5"/>'
+        figura.add_hline(
+            y=float(cota_agua),
+            line_color="#438fbd",
+            line_width=1.5,
+            line_dash="dash",
         )
 
     if circulo and circulo.get("centro_x_m") is not None:
         numero_fatias = int(entradas_talude["quantidade_fatias"])
         passo = (x_entrada - x_saida) / numero_fatias
-        arco = [
-            (x_saida + (x_entrada - x_saida) * indice / 80,
-             _cota_arco(circulo, x_saida + (x_entrada - x_saida) * indice / 80))
-            for indice in range(81)
+        x_arco = [
+            x_saida + (x_entrada - x_saida) * indice / 80 for indice in range(81)
         ]
-        elementos.append(
-            f'<polyline points="{" ".join(f"{sx(x):.1f},{sy(y):.1f}" for x, y in arco)}" fill="none" stroke="#bd5948" stroke-width="3"/>'
+        y_arco = [_cota_arco(circulo, x) for x in x_arco]
+        figura.add_trace(
+            go.Scatter(
+                x=x_arco,
+                y=y_arco,
+                mode="lines",
+                line={"color": "#bd5948", "width": 2.5},
+                hoverinfo="skip",
+                showlegend=False,
+            )
         )
+        x_fatias, y_fatias = [], []
         for indice in range(numero_fatias + 1):
             x_fatia = x_saida + indice * passo
             y_base = _cota_arco(circulo, x_fatia)
-            elementos.append(
-                f'<line x1="{sx(x_fatia):.1f}" y1="{sy(y_base):.1f}" x2="{sx(x_fatia):.1f}" y2="{sy(cota_terreno(x_fatia)):.1f}" stroke="#82918f" stroke-width="1"/>'
+            x_fatias.extend([x_fatia, x_fatia, None])
+            y_fatias.extend([y_base, cota_terreno(x_fatia), None])
+        figura.add_trace(
+            go.Scatter(
+                x=x_fatias,
+                y=y_fatias,
+                mode="lines",
+                line={"color": "#82918f", "width": 1},
+                hoverinfo="skip",
+                showlegend=False,
             )
-        cx, cy = float(circulo["centro_x_m"]), float(circulo["centro_y_m"])
-        elementos.append(f'<circle cx="{sx(cx):.1f}" cy="{sy(cy):.1f}" r="4" fill="#17374c"/>')
-        elementos.append(f'<text x="{sx(cx) + 7:.1f}" y="{sy(cy) - 6:.1f}" fill="#17374c" font-size="12">C</text>')
-
-    x_crista, y_crista = sx(largura_face), sy(altura)
-    elementos.extend(
-        [
-            f'<text x="{sx(x_saida) - 8:.1f}" y="{sy(0) + 18:.1f}" text-anchor="end" fill="#bd5948" font-size="12">saída</text>',
-            f'<text x="{sx(x_entrada) + 6:.1f}" y="{sy(float(geometria["cota_entrada_m"])) - 7:.1f}" fill="#bd5948" font-size="12">entrada</text>',
-            f'<text x="{x_crista + 5:.1f}" y="{y_crista - 8:.1f}" fill="#17374c" font-size="12">crista</text>',
-            f'<text x="{sx(max(0.0, largura_face * 0.45)):.1f}" y="{sy(y_interface) - 7:.1f}" fill="#9b6b20" font-size="12">interface · h₁ = {float(entradas_talude["espessura_camada_superior_m"]):g} m</text>',
-        ]
-    )
-    if cota_agua is not None:
-        elementos.append(f'<text x="{sx(x_min) + 5:.1f}" y="{sy(float(cota_agua)) - 7:.1f}" fill="#367da8" font-size="12">N.A.</text>')
+        )
+        figura.add_trace(
+            go.Scatter(
+                x=[circulo["centro_x_m"]],
+                y=[circulo["centro_y_m"]],
+                mode="markers+text",
+                text=["C"],
+                textposition="top right",
+                marker={"color": "#17374c", "size": 6},
+                hoverinfo="skip",
+                showlegend=False,
+            )
+        )
 
     sobrecarga = float(entradas_talude["sobrecarga_crista_kPa"])
     if sobrecarga > 0:
         for indice in range(3):
-            x = sx(largura_face * (0.28 + indice * 0.19))
-            elementos.append(f'<line x1="{x:.1f}" y1="{sy(altura) - 35:.1f}" x2="{x:.1f}" y2="{sy(altura) - 8:.1f}" stroke="#c45a4b" stroke-width="2" marker-end="url(#seta)"/>')
-        elementos.append(f'<text x="{sx(largura_face * 0.45):.1f}" y="{sy(altura) - 40:.1f}" text-anchor="middle" fill="#bd5948" font-size="13">q = {sobrecarga:g} kPa</text>')
+            figura.add_annotation(
+                x=largura_face * (0.28 + indice * 0.19),
+                y=altura,
+                text="",
+                showarrow=True,
+                arrowhead=2,
+                arrowsize=1,
+                arrowwidth=1.5,
+                arrowcolor="#c45a4b",
+                ax=0,
+                ay=-24,
+            )
+        figura.add_annotation(
+            x=largura_face * 0.45,
+            y=altura + altura * 0.13,
+            text=f"q = {sobrecarga:g} kPa",
+            showarrow=False,
+            font={"color": "#bd5948", "size": 11},
+        )
 
-    elementos.append('<defs><marker id="seta" markerWidth="7" markerHeight="7" refX="3.5" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 Z" fill="#c45a4b"/></marker></defs>')
-    elementos.append('</svg>')
     coluna_croqui, coluna_legenda = st.columns([2.3, 1], vertical_alignment="center")
     with coluna_croqui:
         st.markdown("**Croqui da geometria inserida**")
-        st.html("".join(elementos))
+        figura.update_layout(
+            height=330,
+            margin={"l": 8, "r": 8, "t": 12, "b": 8},
+            showlegend=False,
+            hovermode=False,
+            paper_bgcolor="white",
+            plot_bgcolor="white",
+        )
+        figura.update_xaxes(range=[x_min, x_max], visible=False, zeroline=False)
+        figura.update_yaxes(
+            range=[y_min, y_max], visible=False, zeroline=False, scaleanchor="x", scaleratio=1
+        )
+        st.plotly_chart(
+            figura,
+            width="stretch",
+            theme=None,
+            config={"displayModeBar": False, "responsive": True},
+        )
     with coluna_legenda:
         st.markdown(
             "**Referências do croqui**\n\n"
