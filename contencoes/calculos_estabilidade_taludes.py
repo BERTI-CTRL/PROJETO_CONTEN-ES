@@ -449,7 +449,7 @@ def _buscar_centros_em_malha(
     matriz_circulos: list[list[dict[str, Any] | None]] = []
     circulo_critico_malha = None
     raios_candidatos = [float(raio) for raio in entradas_talude["raios_candidatos_m"]]
-    largura_horizontal_face = geometria["comprimento_horizontal_face_m"]
+    largura_horizontal_face_m = geometria["comprimento_horizontal_face_m"]
 
     for indice_y, centro_y in enumerate(coordenadas_y):
         linha_fs: list[float | None] = []
