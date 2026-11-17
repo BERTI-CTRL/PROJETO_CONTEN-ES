@@ -96,6 +96,27 @@ def _formatar_numero(valor: float | None, casas: int = 2) -> str:
     return f"{valor:,.{casas}f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
 
+def _mostrar_selo_status(coluna: Any, status: str) -> None:
+    if status == "ATENDE":
+        cor_texto = "#6ee7b7"
+        cor_fundo = "rgba(16, 185, 129, 0.16)"
+        simbolo = "✓"
+    elif status in {"REVER", "BLOQUEADO", "FORA DA BASE"}:
+        cor_texto = "#fca5a5"
+        cor_fundo = "rgba(239, 68, 68, 0.18)"
+        simbolo = "!"
+    else:
+        cor_texto = "#bfdbfe"
+        cor_fundo = "rgba(59, 130, 246, 0.16)"
+        simbolo = "·"
+    coluna.markdown(
+        f'<span style="display:inline-block;padding:2px 9px;border-radius:999px;'
+        f'background:{cor_fundo};color:{cor_texto};font-size:0.78rem;font-weight:600">'
+        f'{simbolo}&nbsp; {status}</span>',
+        unsafe_allow_html=True,
+    )
+
+
 def _mostrar_graficos(
     resultado_muro: dict[str, Any],
     entradas_muro: dict[str, Any],
@@ -886,23 +907,23 @@ else:
     colunas_metricas[0].metric(
         "FS contra tombamento",
         _formatar_numero(verificacoes["fator_seguranca_tombamento"], 3),
-        verificacoes["status_tombamento"],
     )
+    _mostrar_selo_status(colunas_metricas[0], verificacoes["status_tombamento"])
     colunas_metricas[1].metric(
         "FS contra deslizamento",
         _formatar_numero(verificacoes["fator_seguranca_deslizamento"], 3),
-        verificacoes["status_deslizamento"],
     )
+    _mostrar_selo_status(colunas_metricas[1], verificacoes["status_deslizamento"])
     colunas_metricas[2].metric(
         "Tensão máxima na base",
         f"{_formatar_numero(verificacoes['tensao_maxima_base_kPa'])} kPa",
-        verificacoes["status_tensao_maxima_base"],
     )
+    _mostrar_selo_status(colunas_metricas[2], verificacoes["status_tensao_maxima_base"])
     colunas_metricas[3].metric(
         "Tensão mínima na base",
         f"{_formatar_numero(verificacoes['tensao_minima_base_kPa'])} kPa",
-        verificacoes["regime_pressao_base"],
     )
+    _mostrar_selo_status(colunas_metricas[3], verificacoes["regime_pressao_base"])
 
     todos_checks_atendem = (
         verificacoes["status_tombamento"] == "ATENDE"
@@ -913,7 +934,7 @@ else:
     if todos_checks_atendem:
         st.success("O caso atende aos checks de estabilidade incluídos nesta fase.")
     else:
-        st.warning("Um ou mais checks precisam de revisão. Confira os limites e a memória de cálculo.")
+        st.error("Um ou mais checks não atendem ou estão bloqueados. Confira os limites e a memória de cálculo.")
 
     _mostrar_graficos(resultado_muro, entradas_muro, camadas_solo)
 
