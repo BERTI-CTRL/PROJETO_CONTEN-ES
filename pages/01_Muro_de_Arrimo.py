@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import math
 from copy import deepcopy
 from typing import Any
 
@@ -13,6 +14,7 @@ from contencoes.calculos_muro_de_arrimo import (
     carregar_exemplo_muro,
     validar_entradas_muro,
 )
+from contencoes.exportar_muro_arrimo_dxf import gerar_desenho_muro_dxf
 
 
 st.set_page_config(page_title="Muro de arrimo | Contenções", page_icon="🧱", layout="wide")
@@ -94,9 +96,140 @@ def _formatar_numero(valor: float | None, casas: int = 2) -> str:
     return f"{valor:,.{casas}f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
 
-def _mostrar_graficos(resultado_muro: dict[str, Any], altura_muro_m: float) -> None:
+def _mostrar_graficos(
+    resultado_muro: dict[str, Any],
+    entradas_muro: dict[str, Any],
+    camadas_solo: list[dict[str, Any]],
+) -> None:
+    altura_muro_m = float(entradas_muro["altura_muro_m"])
+    largura_base_m = float(entradas_muro["largura_base_m"])
+    largura_topo_m = float(entradas_muro["largura_topo_m"])
+    x_tardoz_topo_m = largura_base_m - largura_topo_m
+    x_limite_solo_m = x_tardoz_topo_m - max(2.0, altura_muro_m * 0.6)
+    inclinacao_aterro_rad = math.radians(
+        float(entradas_muro["inclinacao_aterro_graus"])
+    )
+    cota_superficie_limite_m = altura_muro_m + (
+        x_tardoz_topo_m - x_limite_solo_m
+    ) * math.tan(inclinacao_aterro_rad)
+    profundidade_nivel_agua_m = entradas_muro.get("profundidade_nivel_agua_m")
+
     geometria_muro = resultado_muro["geometria_muro"]
-    figura_geometria = go.Figure(
+    figura_geometria = go.Figure()
+    cores_solo_natural = (
+        "#d6c29a", "#cdb48a", "#c3a77d", "#b99970", "#ae8b67", "#a37f5f"
+    )
+    cores_solo_saturado = (
+        "#9fc8d5", "#8dbbc9", "#7eafc1", "#70a2b9", "#6396b0", "#568aa7"
+    )
+    profundidade_acumulada_m = 0.0
+    for indice_camada, camada_solo in enumerate(camadas_solo, start=1):
+        espessura_camada_m = float(camada_solo["espessura_m"])
+        if espessura_camada_m <= 0 or profundidade_acumulada_m >= altura_muro_m:
+            continue
+        profundidade_topo_camada_m = profundidade_acumulada_m
+        profundidade_base_camada_m = min(
+            altura_muro_m, profundidade_topo_camada_m + espessura_camada_m
+        )
+        profundidade_acumulada_m += espessura_camada_m
+        profundidades_divisao_m = [
+            profundidade_topo_camada_m,
+            profundidade_base_camada_m,
+        ]
+        if profundidade_nivel_agua_m is not None:
+            profundidade_agua_m = float(profundidade_nivel_agua_m)
+            if (
+                profundidade_topo_camada_m
+                < profundidade_agua_m
+                < profundidade_base_camada_m
+            ):
+                profundidades_divisao_m.insert(1, profundidade_agua_m)
+
+        for profundidade_topo_faixa_m, profundidade_base_faixa_m in zip(
+            profundidades_divisao_m, profundidades_divisao_m[1:]
+        ):
+            zona_saturada = (
+                profundidade_nivel_agua_m is not None
+                and (profundidade_topo_faixa_m + profundidade_base_faixa_m) / 2
+                >= float(profundidade_nivel_agua_m)
+            )
+            cota_topo_m = altura_muro_m - profundidade_topo_faixa_m
+            cota_base_m = altura_muro_m - profundidade_base_faixa_m
+            x_tardoz_topo_faixa_m = x_tardoz_topo_m * cota_topo_m / altura_muro_m
+            x_tardoz_base_faixa_m = x_tardoz_topo_m * cota_base_m / altura_muro_m
+            cota_superficie_topo_faixa_m = (
+                cota_superficie_limite_m
+                if profundidade_topo_faixa_m == 0
+                else cota_topo_m
+            )
+            nome_zona = "saturada" if zona_saturada else "natural"
+            paleta_solo = cores_solo_saturado if zona_saturada else cores_solo_natural
+            indice_cor = (indice_camada - 1) % len(paleta_solo)
+            figura_geometria.add_trace(
+                go.Scatter(
+                    x=[
+                        x_limite_solo_m,
+                        x_tardoz_topo_faixa_m,
+                        x_tardoz_base_faixa_m,
+                        x_limite_solo_m,
+                        x_limite_solo_m,
+                    ],
+                    y=[
+                        cota_superficie_topo_faixa_m,
+                        cota_topo_m,
+                        cota_base_m,
+                        cota_base_m,
+                        cota_superficie_topo_faixa_m,
+                    ],
+                    fill="toself",
+                    fillcolor=paleta_solo[indice_cor],
+                    line={"color": "rgba(80, 74, 64, 0.45)", "width": 1},
+                    mode="lines",
+                    name=f"Camada {indice_camada} · {nome_zona}",
+                    showlegend=False,
+                    hovertemplate=(
+                        f"Camada {indice_camada} · zona {nome_zona}<br>"
+                        f"γ natural: {float(camada_solo['peso_especifico_natural_kN_m3']):.2f} kN/m³<br>"
+                        f"γ saturado: {float(camada_solo['peso_especifico_saturado_kN_m3']):.2f} kN/m³<br>"
+                        f"φ: {float(camada_solo['angulo_atrito_graus']):.2f}° · "
+                        f"c: {float(camada_solo['coesao_kPa']):.2f} kPa<extra></extra>"
+                    ),
+                )
+            )
+
+        profundidade_meio_camada_m = (
+            profundidade_topo_camada_m + profundidade_base_camada_m
+        ) / 2
+        cota_meio_camada_m = altura_muro_m - profundidade_meio_camada_m
+        x_meio_camadas_m = x_limite_solo_m + (
+            x_tardoz_topo_m * cota_meio_camada_m / altura_muro_m
+            - x_limite_solo_m
+        ) * 0.38
+        figura_geometria.add_annotation(
+            x=x_meio_camadas_m,
+            y=cota_meio_camada_m,
+            text=f"Camada {indice_camada} · φ={float(camada_solo['angulo_atrito_graus']):.1f}°",
+            showarrow=False,
+            font={"size": 11, "color": "#26343a"},
+            bgcolor="rgba(255,255,255,0.55)",
+        )
+
+    figura_geometria.add_trace(
+        go.Scatter(
+            x=[None], y=[None], mode="markers",
+            marker={"symbol": "square", "size": 10, "color": cores_solo_natural[0]},
+            name="Solo natural",
+        )
+    )
+    figura_geometria.add_trace(
+        go.Scatter(
+            x=[None], y=[None], mode="markers",
+            marker={"symbol": "square", "size": 10, "color": cores_solo_saturado[0]},
+            name="Solo saturado",
+        )
+    )
+
+    figura_geometria.add_trace(
         go.Scatter(
             x=[ponto["x_m"] for ponto in geometria_muro],
             y=[ponto["cota_y_m"] for ponto in geometria_muro],
@@ -104,21 +237,86 @@ def _mostrar_graficos(resultado_muro: dict[str, Any], altura_muro_m: float) -> N
             fillcolor="rgba(38, 111, 91, 0.22)",
             line={"color": "#176452", "width": 3},
             mode="lines",
-            name="Muro trapezoidal",
+            name="Muro de concreto",
+            hovertemplate="Muro de concreto<extra></extra>",
         )
     )
+    figura_geometria.add_trace(
+        go.Scatter(
+            x=[x_limite_solo_m, x_tardoz_topo_m],
+            y=[cota_superficie_limite_m, altura_muro_m],
+            mode="lines",
+            line={"color": "#765b35", "width": 3},
+            name="Superfície do aterro",
+            hovertemplate="Superfície do aterro<extra></extra>",
+        )
+    )
+    profundidade_acumulada_m = 0.0
+    for camada_solo in camadas_solo:
+        profundidade_acumulada_m += float(camada_solo["espessura_m"])
+        if profundidade_acumulada_m >= altura_muro_m:
+            continue
+        cota_interface_m = altura_muro_m - profundidade_acumulada_m
+        figura_geometria.add_trace(
+            go.Scatter(
+            x=[
+                x_limite_solo_m,
+                x_tardoz_topo_m * cota_interface_m / altura_muro_m,
+            ],
+                y=[cota_interface_m, cota_interface_m],
+                mode="lines",
+                line={"color": "#584c3a", "width": 1.5, "dash": "dash"},
+                name="Interface entre camadas",
+                showlegend=False,
+                hovertemplate="Interface entre camadas<extra></extra>",
+            )
+        )
+    if profundidade_nivel_agua_m is not None:
+        cota_nivel_agua_m = altura_muro_m - float(profundidade_nivel_agua_m)
+        if 0 <= cota_nivel_agua_m <= altura_muro_m:
+            figura_geometria.add_trace(
+                go.Scatter(
+                    x=[
+                        x_limite_solo_m,
+                        x_tardoz_topo_m * cota_nivel_agua_m / altura_muro_m,
+                    ],
+                    y=[cota_nivel_agua_m, cota_nivel_agua_m],
+                    mode="lines",
+                    line={"color": "#1479a6", "width": 3, "dash": "dashdot"},
+                    name="Nível d’água",
+                    hovertemplate="Nível d’água<extra></extra>",
+                )
+            )
+            figura_geometria.add_annotation(
+                x=x_limite_solo_m,
+                y=cota_nivel_agua_m,
+                text="N.A.",
+                showarrow=False,
+                xshift=20,
+                yshift=10,
+                font={"size": 11, "color": "#075d82"},
+                bgcolor="rgba(255,255,255,0.7)",
+            )
     figura_geometria.update_layout(
-        title="Seção transversal",
+        title="Perfil do muro e das camadas de solo",
         height=400,
         margin={"l": 18, "r": 18, "t": 55, "b": 30},
         xaxis_title="Largura (m)",
         yaxis_title="Cota (m)",
-        showlegend=False,
+        legend={"orientation": "h", "y": -0.24},
         paper_bgcolor="white",
         plot_bgcolor="white",
     )
-    figura_geometria.update_yaxes(range=[0, altura_muro_m * 1.08], zeroline=False)
-    figura_geometria.update_xaxes(zeroline=False, scaleanchor="y", scaleratio=1)
+    figura_geometria.update_yaxes(
+        range=[0, max(altura_muro_m * 1.08, cota_superficie_limite_m * 1.08)],
+        zeroline=False,
+    )
+    figura_geometria.update_xaxes(
+        range=[x_limite_solo_m - 0.5, largura_base_m + 0.5],
+        zeroline=False,
+        scaleanchor="y",
+        scaleratio=1,
+    )
 
     figura_pressao = go.Figure()
     estilos_diagrama = (
@@ -411,7 +609,23 @@ else:
     else:
         st.warning("Um ou mais checks precisam de revisão. Confira os limites e a memória de cálculo.")
 
-    _mostrar_graficos(resultado_muro, entradas_muro["altura_muro_m"])
+    _mostrar_graficos(resultado_muro, entradas_muro, camadas_solo)
+
+    arquivo_dxf_muro = gerar_desenho_muro_dxf(
+        entradas_muro, camadas_solo, resultado_muro
+    )
+    st.download_button(
+        "Baixar desenho CAD do muro (.dxf)",
+        data=arquivo_dxf_muro,
+        file_name="muro_de_arrimo.dxf",
+        mime="application/dxf",
+        help="Inclui o muro cotado, camadas de solo preenchidas, nível d'água, diagramas de pressão e resumo dos resultados.",
+        key="baixar_dxf_muro_arrimo",
+    )
+    st.caption(
+        "O DXF separa cada camada de solo e suas zonas natural/saturada em layers, "
+        "para você poder conferir, ocultar ou editar no AutoCAD."
+    )
 
     with st.expander("Empuxos resultantes", expanded=True):
         colunas_empuxos = st.columns(4)
