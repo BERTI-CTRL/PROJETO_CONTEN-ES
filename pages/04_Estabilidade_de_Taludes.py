@@ -869,8 +869,16 @@ def _mostrar_grafico_geometria(
     maior_cota_m = max(coordenadas_perfil_y + [0.0])
     if circulo_selecionado and circulo_selecionado["centro_y_m"] is not None:
         maior_cota_m = max(maior_cota_m, circulo_selecionado["centro_y_m"])
-    if busca_centros:
-        maior_cota_m = max(maior_cota_m, max(busca_centros["coordenadas_y_m"]))
+    if busca_centros and circulo_critico_malha:
+        cotas_centros_malha_validos = [
+            busca_centros["coordenadas_y_m"][indice_y]
+            for indice_y, linha_fs in enumerate(
+                busca_centros["fatores_seguranca_minimos"]
+            )
+            if any(fator_seguranca is not None for fator_seguranca in linha_fs)
+        ]
+        if cotas_centros_malha_validos:
+            maior_cota_m = max(maior_cota_m, max(cotas_centros_malha_validos))
     menor_cota_m = min(coordenadas_perfil_y + [0.0])
     if circulo_selecionado and circulo_selecionado["centro_y_m"] is not None:
         menor_cota_m = min(menor_cota_m, *_coordenadas_arco_y(circulo_selecionado))
@@ -893,7 +901,11 @@ def _mostrar_grafico_geometria(
         plot_bgcolor="white",
     )
     figura_geometria.update_xaxes(
-        range=[x_minimo_m, x_maximo_m], zeroline=False, scaleanchor="y", scaleratio=1
+        range=[x_minimo_m, x_maximo_m],
+        zeroline=False,
+        scaleanchor="y",
+        scaleratio=1,
+        constrain="domain",
     )
     figura_geometria.update_yaxes(
         range=[menor_cota_m - 0.05 * max(1.0, maior_cota_m), maior_cota_m * 1.1 + 0.1]
