@@ -575,6 +575,11 @@ st.caption(
     "Dois casos de Rankine para conferência didática: cortina em balanço em solo granular "
     "e cortina ancorada com ficha conhecida."
 )
+st.info(
+    "Use esta página para analisar uma estaca-prancha em balanço ou uma cortina ancorada. "
+    "Informe geometria e solo para conferir a ficha, as pressões e as forças no tirante, "
+    "com perfil, diagramas e memória do cálculo."
+)
 if aviso_armazenamento:
     st.warning(aviso_armazenamento)
 with st.expander("Sobre o salvamento dos dados"):

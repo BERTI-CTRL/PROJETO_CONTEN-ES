@@ -1362,6 +1362,11 @@ st.caption(
     "Método das fatias de Fellenius · superfície circular · até duas camadas · "
     "cálculo por metro de largura."
 )
+st.info(
+    "Informe a geometria, água e parâmetros do solo para comparar os raios circulares pelo método "
+    "de Fellenius. Veja o FS de cada círculo, a busca complementar em malha, as fatias e o perfil; "
+    "o CAD pode ser baixado para o círculo selecionado."
+)
 if aviso_armazenamento:
     st.warning(aviso_armazenamento)
 with st.expander("Sobre o salvamento dos dados"):

@@ -348,6 +348,11 @@ st.caption(
     "Envoltórias de Terzaghi–Peck, força aproximada nas escoras e três verificações "
     "geotécnicas simplificadas da planilha."
 )
+st.info(
+    "Aqui você consulta as pressões aparentes em escavações escoradas e estima a carga por escora. "
+    "A página também reúne verificações de ruptura de fundo, estabilidade hidráulica e profundidade "
+    "crítica de corte vertical, conforme os modelos disponíveis."
+)
 if aviso_armazenamento:
     st.warning(aviso_armazenamento)
 with st.expander("Sobre o salvamento dos dados"):

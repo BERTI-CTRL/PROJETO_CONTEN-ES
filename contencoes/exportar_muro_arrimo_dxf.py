@@ -78,12 +78,14 @@ def _desenhar_secao_muro(
     altura_muro_m = float(entradas_muro["altura_muro_m"])
     largura_base_m = float(entradas_muro["largura_base_m"])
     largura_topo_m = float(entradas_muro["largura_topo_m"])
-    x_tardoz_topo_m = largura_base_m - largura_topo_m
-    extensao_aterro_m = max(2.0, altura_muro_m * 0.6)
-    x_limite_aterro_m = x_tardoz_topo_m - extensao_aterro_m
+    # A seção e o croqui usam o tardoz vertical em x = largura da base,
+    # com o aterro retido à direita do muro.
+    x_tardoz_topo_m = largura_base_m
+    extensao_aterro_m = max(2.2, altura_muro_m * 0.55)
+    x_limite_aterro_m = x_tardoz_topo_m + extensao_aterro_m
     inclinacao_aterro_rad = radians(float(entradas_muro["inclinacao_aterro_graus"]))
     cota_aterro_limite_m = altura_muro_m + (
-        x_tardoz_topo_m - x_limite_aterro_m
+        x_limite_aterro_m - x_tardoz_topo_m
     ) * tan(inclinacao_aterro_rad)
     profundidade_nivel_agua_m = entradas_muro.get("profundidade_nivel_agua_m")
     _hachurar_camadas_solo(
@@ -113,11 +115,16 @@ def _desenhar_secao_muro(
         espessura_camada_m = float(camada_solo["espessura_m"])
         if espessura_camada_m <= 0:
             continue
-        cota_meio_camada_m = altura_muro_m - profundidade_acumulada_m - espessura_camada_m / 2
+        cota_meio_camada_m = (
+            altura_muro_m - profundidade_acumulada_m - espessura_camada_m / 2
+        )
         _adicionar_texto(
             espaco_modelo,
             f"CAMADA {indice_camada}",
-            (x_limite_aterro_m + 0.15, cota_meio_camada_m),
+            (
+                x_tardoz_topo_m + extensao_aterro_m * 0.5,
+                cota_meio_camada_m,
+            ),
             max(0.16, altura_muro_m * 0.025),
             "INTERFACES_SOLO",
         )
@@ -125,25 +132,26 @@ def _desenhar_secao_muro(
         if profundidade_acumulada_m >= altura_muro_m - 1e-9:
             continue
         cota_interface_m = altura_muro_m - profundidade_acumulada_m
-        x_tardoz_interface_m = x_tardoz_topo_m * cota_interface_m / altura_muro_m
         espaco_modelo.add_line(
+            (x_tardoz_topo_m, cota_interface_m),
             (x_limite_aterro_m, cota_interface_m),
-            (x_tardoz_interface_m, cota_interface_m),
             dxfattribs={"layer": "INTERFACES_SOLO"},
         )
 
     if profundidade_nivel_agua_m is not None:
         cota_nivel_agua_m = altura_muro_m - float(profundidade_nivel_agua_m)
-        x_tardoz_nivel_agua_m = x_tardoz_topo_m * cota_nivel_agua_m / altura_muro_m
         espaco_modelo.add_line(
+            (x_tardoz_topo_m, cota_nivel_agua_m),
             (x_limite_aterro_m, cota_nivel_agua_m),
-            (x_tardoz_nivel_agua_m, cota_nivel_agua_m),
             dxfattribs={"layer": "NIVEL_AGUA"},
         )
         _adicionar_texto(
             espaco_modelo,
             "N.A.",
-            (x_limite_aterro_m + 0.15, cota_nivel_agua_m + 0.12),
+            (
+                x_tardoz_topo_m + extensao_aterro_m * 0.08,
+                cota_nivel_agua_m + 0.12,
+            ),
             max(0.17, altura_muro_m * 0.028),
             "NIVEL_AGUA",
         )
@@ -202,8 +210,8 @@ def _hachurar_camadas_solo(
             sufixo_zona = "SATURADA" if zona_saturada else "NATURAL"
             cota_topo_m = altura_muro_m - profundidade_topo_m
             cota_base_m = altura_muro_m - profundidade_base_m
-            x_tardoz_topo_m_local = x_tardoz_topo_m * cota_topo_m / altura_muro_m
-            x_tardoz_base_m_local = x_tardoz_topo_m * cota_base_m / altura_muro_m
+            x_tardoz_topo_m_local = x_tardoz_topo_m
+            x_tardoz_base_m_local = x_tardoz_topo_m
             cota_superficie_topo_m = (
                 cota_aterro_limite_m
                 if profundidade_topo_m == 0

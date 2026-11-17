@@ -728,6 +728,11 @@ st.caption(
     "Muro trapezoidal de gravidade · cálculo por metro de comprimento · "
     "salvamento automático neste navegador."
 )
+st.info(
+    "Nesta página, informe a geometria do muro, as camadas de solo, o nível d’água e as ações. "
+    "O app calcula empuxos, tombamento, deslizamento e tensões na base; apresenta o croqui, "
+    "a memória de cálculo e o desenho CAD para baixar."
+)
 if aviso_armazenamento:
     st.warning(aviso_armazenamento)
 with st.expander("Sobre o salvamento dos dados"):

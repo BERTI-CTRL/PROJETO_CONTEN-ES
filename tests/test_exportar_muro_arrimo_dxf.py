@@ -30,6 +30,22 @@ class ExportacaoMuroDXFTest(unittest.TestCase):
         self.assertEqual(len(hachuras_solo), 3)
         self.assertTrue(all(hachura.dxf.color == 256 for hachura in hachuras_solo))
 
+        largura_base_m = float(entradas_muro["largura_base_m"])
+        for hachura in hachuras_solo:
+            vertices_hachura = [
+                vertice
+                for caminho in hachura.paths.paths
+                for vertice in caminho.vertices
+            ]
+            self.assertTrue(vertices_hachura)
+            self.assertGreaterEqual(
+                min(vertice[0] for vertice in vertices_hachura), largura_base_m
+            )
+
+        linha_aterro = next(iter(espaco_modelo.query('LINE[layer=="ATERRO"]')))
+        self.assertGreater(linha_aterro.dxf.start.x, largura_base_m)
+        self.assertAlmostEqual(linha_aterro.dxf.end.x, largura_base_m)
+
         resumo = "\n".join(texto.dxf.text for texto in espaco_modelo.query("TEXT"))
         resumo += "\n" + "\n".join(texto.text for texto in espaco_modelo.query("MTEXT"))
         self.assertIn("RESUMO DO MURO", resumo)
