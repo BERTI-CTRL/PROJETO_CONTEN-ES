@@ -527,17 +527,69 @@ def _montar_esquema_referencia(
             text=f"Sobrecarga uniforme  q = {carga_q_kPa:.1f} kN/m²",
             showarrow=False, font={"size": 13, "color": "#225b86"},
         )
+    figura.add_annotation(
+        x=largura_base_m + extensao_solo_m * 0.78,
+        y=altura_muro_m + extensao_solo_m * 0.78 * math.tan(inclinacao_aterro_rad),
+        text=f"β = {float(entradas_muro['inclinacao_aterro_graus']):.1f}°",
+        showarrow=True,
+        arrowhead=2,
+        arrowcolor="#765b35",
+        ax=38,
+        ay=-35,
+        font={"size": 11, "color": "#765b35"},
+        bgcolor="rgba(255,255,255,0.88)",
+    )
+    figura.add_annotation(
+        x=largura_base_m,
+        y=altura_muro_m * 0.62,
+        text=f"δ = {float(entradas_muro['atrito_solo_muro_graus']):.1f}°",
+        showarrow=True,
+        arrowhead=2,
+        arrowcolor="#7256a3",
+        ax=42,
+        ay=-5,
+        font={"size": 11, "color": "#7256a3"},
+        bgcolor="rgba(255,255,255,0.88)",
+    )
 
     geometria = resultado_muro["verificacoes"]
     for y in (0,):
         figura.add_shape(type="line", x0=-0.5, x1=x_limite_solo_m + 0.4, y0=y, y1=y,
                          line={"color": "#66777b", "width": 1})
-    figura.add_annotation(x=largura_base_m / 2, y=-0.55,
-        text=f"Base b = {largura_base_m:.2f} m", showarrow=False, font={"size": 12})
-    figura.add_annotation(x=largura_base_m - largura_topo_m / 2, y=altura_muro_m + 0.15,
-        text=f"Topo = {largura_topo_m:.2f} m", showarrow=False, font={"size": 11})
-    figura.add_annotation(x=-0.45, y=altura_muro_m / 2,
-        text=f"Altura = {altura_muro_m:.2f} m", textangle=-90, showarrow=False, font={"size": 12})
+    figura.add_annotation(
+        x=largura_base_m / 2,
+        y=0,
+        text=f"b = {largura_base_m:.2f} m",
+        showarrow=True,
+        arrowhead=2,
+        arrowcolor="#17374c",
+        ax=0,
+        ay=34,
+        font={"size": 12, "color": "#17374c"},
+    )
+    figura.add_annotation(
+        x=largura_base_m - largura_topo_m / 2,
+        y=altura_muro_m,
+        text=f"t = {largura_topo_m:.2f} m",
+        showarrow=True,
+        arrowhead=2,
+        arrowcolor="#17374c",
+        ax=0,
+        ay=-32,
+        font={"size": 11, "color": "#17374c"},
+    )
+    figura.add_annotation(
+        x=0,
+        y=altura_muro_m / 2,
+        text=f"H = {altura_muro_m:.2f} m",
+        textangle=-90,
+        showarrow=True,
+        arrowhead=2,
+        arrowcolor="#17374c",
+        ax=-34,
+        ay=0,
+        font={"size": 12, "color": "#17374c"},
+    )
     figura.add_annotation(x=largura_base_m + extensao_solo_m / 2, y=-0.55,
         text=f"f = {float(entradas_muro['coeficiente_atrito_base']):.2f}  ·  qadm = {float(entradas_muro['tensao_admissivel_fundacao_kPa']):.0f} kPa",
         showarrow=False, font={"size": 11, "color": "#485a61"})
@@ -671,6 +723,54 @@ with coluna_referencia:
 
 with st.container(border=True):
     st.subheader("Geometria, ações e fundação")
+    dados_croqui = _capturar_dados_dos_widgets()
+    entradas_croqui = dados_croqui["entradas_muro"]
+    camadas_croqui = dados_croqui["camadas_solo"]
+    erros_croqui = validar_entradas_muro(entradas_croqui, camadas_croqui)
+    resultado_croqui = None
+    if not erros_croqui:
+        resultado_croqui = calcular_muro(entradas_croqui, camadas_croqui)
+        coluna_croqui, coluna_simbolos = st.columns([2.2, 1], vertical_alignment="center")
+        with coluna_croqui:
+            st.markdown("**Croqui do muro e dos parâmetros inseridos**")
+            figura_croqui = _montar_esquema_referencia(
+                resultado_croqui, entradas_croqui, camadas_croqui
+            )
+            figura_croqui.update_layout(
+                height=500,
+                margin={"l": 55, "r": 20, "t": 55, "b": 45},
+            )
+            st.plotly_chart(
+                figura_croqui,
+                width="stretch",
+                theme=None,
+                config={"displayModeBar": False, "responsive": True},
+            )
+        with coluna_simbolos:
+            st.markdown("**Referências do croqui**")
+            st.markdown(
+                "**Geometria e terreno**\n"
+                f"- H: altura do muro = {_formatar_numero(entradas_croqui['altura_muro_m'])} m\n"
+                f"- b: largura da base = {_formatar_numero(entradas_croqui['largura_base_m'])} m\n"
+                f"- t: largura do topo = {_formatar_numero(entradas_croqui['largura_topo_m'])} m\n"
+                f"- β: inclinação do aterro = {_formatar_numero(entradas_croqui['inclinacao_aterro_graus'], 1)}°\n\n"
+                "**Ações e contato**\n"
+                f"- q: sobrecarga = {_formatar_numero(entradas_croqui['sobrecarga_kPa'])} kPa\n"
+                f"- δ: atrito solo–muro = {_formatar_numero(entradas_croqui['atrito_solo_muro_graus'], 1)}°\n"
+                f"- N.A.: profundidade = {_formatar_numero(entradas_croqui['profundidade_nivel_agua_m'])} m\n"
+                f"- γw: peso específico da água = {_formatar_numero(entradas_croqui['peso_especifico_agua_kN_m3'])} kN/m³\n"
+                f"- Teoria de empuxo: {entradas_croqui['metodo_empuxo']}\n\n"
+                "**Materiais e fundação**\n"
+                f"- γc: peso específico do concreto = {_formatar_numero(entradas_croqui['peso_especifico_concreto_kN_m3'])} kN/m³\n"
+                f"- f: atrito na base = {_formatar_numero(entradas_croqui['coeficiente_atrito_base'], 2)}\n"
+                f"- qadm: tensão admissível = {_formatar_numero(entradas_croqui['tensao_admissivel_fundacao_kPa'])} kPa\n"
+                f"- FS mínimo: tombamento = {_formatar_numero(entradas_croqui['fator_seguranca_minimo_tombamento'], 2)}; "
+                f"deslizamento = {_formatar_numero(entradas_croqui['fator_seguranca_minimo_deslizamento'], 2)}\n"
+                "- Camadas: espessura, γ natural/saturado, φ e c conforme os campos abaixo."
+            )
+    else:
+        st.info("O croqui aparece quando os campos formarem uma geometria e um perfil de solo válidos.")
+
     coluna_geometria, coluna_acoes, coluna_fundacao = st.columns(3)
     with coluna_geometria:
         st.number_input("Altura do muro, H (m)", min_value=0.0, step=0.10, key="altura_muro_m")
@@ -777,7 +877,7 @@ if erros_entrada:
     for erro in erros_entrada:
         st.markdown(f"- {erro}")
 else:
-    resultado_muro = calcular_muro(entradas_muro, camadas_solo)
+    resultado_muro = resultado_croqui or calcular_muro(entradas_muro, camadas_solo)
     resumo = resultado_muro["resumo"]
     verificacoes = resultado_muro["verificacoes"]
     st.divider()
