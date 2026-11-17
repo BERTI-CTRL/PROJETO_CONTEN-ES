@@ -326,18 +326,28 @@ def _mostrar_graficos(
                 bgcolor="rgba(255,255,255,0.7)",
             )
     figura_geometria.update_layout(
-        title="Perfil do muro e das camadas de solo",
-        height=400,
-        margin={"l": 18, "r": 18, "t": 55, "b": 30},
-        xaxis_title="Largura (m)",
+        title={
+            "text": "SEÇÃO DO MURO E DO TERRENO<sup>   ·   perfil estratigráfico</sup>",
+            "x": 0.03,
+            "font": {"size": 19, "color": "#17374c"},
+        },
+        height=560,
+        margin={"l": 55, "r": 35, "t": 75, "b": 70},
+        xaxis_title="← muro                         tardoz / aterro →",
         yaxis_title="Cota (m)",
-        legend={"orientation": "h", "y": -0.24},
-        paper_bgcolor="white",
-        plot_bgcolor="white",
+        legend={"orientation": "h", "y": -0.18, "x": 0.03},
+        paper_bgcolor="#f8fafb",
+        plot_bgcolor="#f8fafb",
+        font={"family": "Arial, sans-serif", "color": "#344b5a", "size": 12},
+        hoverlabel={"bgcolor": "white", "font_size": 13},
     )
     figura_geometria.update_yaxes(
         range=[0, max(altura_muro_m * 1.08, cota_superficie_limite_m * 1.08)],
         zeroline=False,
+        gridcolor="#dce5e9",
+        ticks="outside",
+        showline=True,
+        linecolor="#82949d",
     )
     figura_geometria.update_xaxes(
         range=[x_limite_solo_m - 0.5, largura_base_m + 0.5],
@@ -345,6 +355,9 @@ def _mostrar_graficos(
         zeroline=False,
         scaleanchor="y",
         scaleratio=1,
+        showgrid=False,
+        showline=True,
+        linecolor="#82949d",
     )
 
     figura_pressao = go.Figure()
@@ -367,7 +380,7 @@ def _mostrar_graficos(
         )
     figura_pressao.update_layout(
         title="Pressões atrás do muro",
-        height=400,
+        height=430,
         margin={"l": 18, "r": 18, "t": 55, "b": 30},
         xaxis_title="Pressão horizontal (kPa)",
         yaxis_title="Profundidade a partir do topo (m)",
@@ -378,11 +391,13 @@ def _mostrar_graficos(
     figura_pressao.update_yaxes(range=[altura_muro_m, 0], zeroline=False)
     figura_pressao.update_xaxes(rangemode="tozero", zeroline=True, zerolinecolor="#9ba9ac")
 
-    coluna_geometria, coluna_pressao = st.columns(2)
-    with coluna_geometria:
-        st.plotly_chart(figura_geometria, width="stretch", theme=None)
-    with coluna_pressao:
-        st.plotly_chart(figura_pressao, width="stretch", theme=None)
+    st.markdown(
+        "**Esquema da seção** · As setas laranja representam a sobrecarga; "
+        "as cores separam as camadas e as zonas acima e abaixo do nível d’água. "
+        "Passe o cursor sobre o solo para consultar seus parâmetros."
+    )
+    st.plotly_chart(figura_geometria, width="stretch", theme=None)
+    st.plotly_chart(figura_pressao, width="stretch", theme=None)
 
 
 def _mostrar_memoria_calculo(resultado_muro: dict[str, Any]) -> None:
