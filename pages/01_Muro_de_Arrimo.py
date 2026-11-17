@@ -221,6 +221,34 @@ def _mostrar_graficos(
             name="Solo natural",
         )
     )
+    if float(entradas_muro["sobrecarga_kPa"]) > 0:
+        for numero_seta in range(4):
+            x_seta_m = x_limite_solo_m + (numero_seta + 1) * (
+                x_tardoz_topo_m - x_limite_solo_m
+            ) / 5
+            cota_superficie_seta_m = altura_muro_m + (
+                x_tardoz_topo_m - x_seta_m
+            ) * math.tan(inclinacao_aterro_rad)
+            figura_geometria.add_annotation(
+                x=x_seta_m,
+                y=cota_superficie_seta_m,
+                ax=x_seta_m,
+                ay=cota_superficie_seta_m + max(0.45, altura_muro_m * 0.1),
+                text="",
+                showarrow=True,
+                arrowhead=2,
+                arrowsize=1.2,
+                arrowwidth=2,
+                arrowcolor="#c56d16",
+            )
+        figura_geometria.add_annotation(
+            x=x_limite_solo_m + (x_tardoz_topo_m - x_limite_solo_m) / 2,
+            y=cota_superficie_limite_m + max(0.6, altura_muro_m * 0.12),
+            text=f"Sobrecarga q = {float(entradas_muro['sobrecarga_kPa']):.1f} kPa",
+            showarrow=False,
+            font={"size": 12, "color": "#9a4d08"},
+            bgcolor="rgba(255,255,255,0.85)",
+        )
     figura_geometria.add_trace(
         go.Scatter(
             x=[None], y=[None], mode="markers",
@@ -313,6 +341,7 @@ def _mostrar_graficos(
     )
     figura_geometria.update_xaxes(
         range=[x_limite_solo_m - 0.5, largura_base_m + 0.5],
+        autorange="reversed",
         zeroline=False,
         scaleanchor="y",
         scaleratio=1,
