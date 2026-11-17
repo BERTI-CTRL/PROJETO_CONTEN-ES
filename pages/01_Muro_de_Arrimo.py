@@ -535,7 +535,14 @@ def _montar_esquema_referencia(
         height=560, margin={"l": 70, "r": 35, "t": 70, "b": 55},
         paper_bgcolor="#fbfcfd", plot_bgcolor="#fbfcfd",
         xaxis={"range": [-0.8, x_limite_solo_m + 0.5], "title": "Seção transversal (m)", "showgrid": False, "zeroline": False},
-        yaxis={"range": [-0.9, cota_superficie_lateral_m + 1.8], "title": "Cota (m)", "gridcolor": "#e3e9ec", "scaleanchor": "x", "scaleratio": 1},
+        yaxis={
+            "range": [-0.9, cota_superficie_lateral_m + 1.8],
+            "title": "Cota (m)",
+            "gridcolor": "#e3e9ec",
+            "zeroline": False,
+            "automargin": True,
+        },
+        autosize=True,
         showlegend=False,
     )
     return figura
