@@ -27,17 +27,19 @@ st.markdown(
         text-transform: uppercase;
     }
     .hero-contencoes h1 {color: #ffffff; margin: 0.5rem 0; font-size: 2.6rem;}
-    .hero-contencoes p {color: #e0ece8; margin: 0; max-width: 780px; font-size: 1.04rem;}
+    .hero-contencoes p {color: #e0ece8; margin: 0; max-width: 980px; font-size: 1.04rem; line-height: 1.55;}
     .cartao-estrutura {
-        min-height: 172px;
+        min-height: 250px;
         padding: 1.25rem 1.35rem;
         border: 1px solid #e2e8e5;
         border-radius: 18px;
         background: #ffffff;
         box-shadow: 0 8px 24px rgba(25, 52, 44, 0.055);
+        margin-bottom: 0.6rem;
     }
     .cartao-estrutura h3 {margin: 0.35rem 0 0.45rem; color: #17374c;}
     .cartao-estrutura p {color: #687a80; margin: 0; font-size: 0.95rem;}
+    .cartao-estrutura ul {color: #46575e; margin: 0.8rem 0 0; padding-left: 1.2rem; line-height: 1.55; font-size: 0.9rem;}
     .etiqueta-disponivel {color: #18745d; font-weight: 700; font-size: 0.8rem;}
     .etiqueta-futura {color: #87939a; font-weight: 700; font-size: 0.8rem;}
     </style>
@@ -51,95 +53,100 @@ st.markdown(
         <div class="sobretitulo">Ferramenta de conferência · Geotecnia</div>
         <h1>Projeto de contenções</h1>
         <p>
-            Uma memória de cálculo clara para acompanhar os exercícios das aulas,
-            comparar resultados com a planilha e guardar seus cenários no navegador.
+            Aplicação didática para explorar quatro sistemas de contenção. Informe os dados,
+            acompanhe os croquis e diagramas, consulte como os resultados foram calculados
+            e compare seus cenários com as planilhas e referências das aulas.
         </p>
     </section>
     """,
     unsafe_allow_html=True,
 )
 
-st.subheader("Escolha uma estrutura")
+st.subheader("O que você pode fazer")
 st.caption(
-    "Os módulos de Muro, Estaca-prancha, Estruturas escoradas e Estabilidade de Taludes estão disponíveis."
+    "Cada módulo reúne campos de entrada, resultados, representações gráficas e uma memória para acompanhar as hipóteses do cálculo."
 )
 
-coluna_muro, coluna_estaca, coluna_escorada, coluna_talude = st.columns(4, gap="medium")
+paginas_projeto = [
+    {
+        "arquivo": "pages/01_Muro_de_Arrimo.py",
+        "titulo": "🧱 Muro de arrimo",
+        "descricao": "Avalie um muro de gravidade com seção trapezoidal e solo retido em camadas.",
+        "recursos": [
+            "Empuxos de solo, sobrecarga e água pelos métodos disponíveis.",
+            "Verificações de tombamento, deslizamento e tensões na base.",
+            "Croqui, diagramas, memória de cálculo e exportação CAD.",
+        ],
+        "botao": "Abrir módulo de muro",
+        "icone": "🧱",
+    },
+    {
+        "arquivo": "pages/02_Estaca_Prancha.py",
+        "titulo": "▥ Estaca-prancha",
+        "descricao": "Compare dois modelos de cortina: em balanço e ancorada.",
+        "recursos": [
+            "Ficha teórica e ficha preliminar para o caso em balanço.",
+            "Pressões ativa e passiva, esforços e força no tirante.",
+            "Perfil, diagramas e memória para conferir os resultados.",
+        ],
+        "botao": "Abrir módulo de estaca-prancha",
+        "icone": "📐",
+    },
+    {
+        "arquivo": "pages/03_Escoradas.py",
+        "titulo": "⌁ Estruturas escoradas",
+        "descricao": "Explore estimativas para escavações com níveis de escoras.",
+        "recursos": [
+            "Envoltórias de pressão aparente e carga estimada por escora.",
+            "Verificação de ruptura de fundo em argila não drenada.",
+            "Estabilidade hidráulica pelo critério de Graux e profundidade crítica de corte.",
+        ],
+        "botao": "Abrir módulo de escoradas",
+        "icone": "🏗️",
+    },
+    {
+        "arquivo": "pages/04_Estabilidade_de_Taludes.py",
+        "titulo": "◢ Estabilidade de taludes",
+        "descricao": "Analise superfícies circulares pelo método das fatias de Fellenius.",
+        "recursos": [
+            "Compare fatores de segurança dos raios candidatos e da malha de centros.",
+            "Inspecione o perfil, as fatias e a memória de cálculo.",
+            "Escolha um círculo válido para visualizar e exportar em CAD.",
+        ],
+        "botao": "Abrir módulo de taludes",
+        "icone": "⛰️",
+    },
+]
 
-with coluna_muro:
-    st.markdown(
-        """
-        <div class="cartao-estrutura">
-            <div class="etiqueta-disponivel">● DISPONÍVEL</div>
-            <h3>🧱 Muro de arrimo</h3>
-            <p>Empuxos, tombamento, deslizamento e tensões na base.</p>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-    st.page_link(
-        "pages/01_Muro_de_Arrimo.py",
-        label="Abrir cálculo do muro",
-        icon="🧱",
-        use_container_width=True,
-    )
-
-with coluna_estaca:
-    st.markdown(
-        """
-        <div class="cartao-estrutura">
-            <div class="etiqueta-disponivel">● DISPONÍVEL</div>
-            <h3>▥ Estaca-prancha</h3>
-            <p>Ficha em balanço e cortina ancorada.</p>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-    st.page_link(
-        "pages/02_Estaca_Prancha.py",
-        label="Abrir cálculo da estaca-prancha",
-        icon="📐",
-        use_container_width=True,
-    )
-
-with coluna_escorada:
-    st.markdown(
-        """
-        <div class="cartao-estrutura">
-            <div class="etiqueta-disponivel">● DISPONÍVEL</div>
-            <h3>⌁ Estruturas escoradas</h3>
-            <p>Pressões aparentes, força nas escoras e verificações geotécnicas.</p>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-    st.page_link(
-        "pages/03_Escoradas.py",
-        label="Abrir cálculo das escoradas",
-        icon="🏗️",
-        use_container_width=True,
-    )
-
-with coluna_talude:
-    st.markdown(
-        """
-        <div class="cartao-estrutura">
-            <div class="etiqueta-disponivel">● DISPONÍVEL</div>
-            <h3>◢ Estabilidade de taludes</h3>
-            <p>Superfícies circulares por fatias e busca do FS crítico.</p>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-    st.page_link(
-        "pages/04_Estabilidade_de_Taludes.py",
-        label="Abrir cálculo do talude",
-        icon="⛰️",
-        use_container_width=True,
-    )
+for inicio_linha in range(0, len(paginas_projeto), 2):
+    colunas = st.columns(2, gap="large")
+    for coluna, pagina in zip(colunas, paginas_projeto[inicio_linha : inicio_linha + 2]):
+        with coluna:
+            itens_recursos = "".join(
+                f"<li>{recurso}</li>" for recurso in pagina["recursos"]
+            )
+            st.markdown(
+                f"""
+                <div class="cartao-estrutura">
+                    <div class="etiqueta-disponivel">● MÓDULO DISPONÍVEL</div>
+                    <h3>{pagina['titulo']}</h3>
+                    <p>{pagina['descricao']}</p>
+                    <ul>{itens_recursos}</ul>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+            st.page_link(
+                pagina["arquivo"],
+                label=pagina["botao"],
+                icon=pagina["icone"],
+                use_container_width=True,
+            )
 
 st.divider()
 st.markdown(
-    "**Uso didático:** os cálculos seguem as hipóteses da planilha e das aulas de referência. "
-    "Confira em cada página os métodos e limites incluídos."
+    "**Como usar o projeto:** escolha um módulo, preencha os dados e acompanhe as figuras, "
+    "resultados e memória de cálculo. Os exemplos podem ser restaurados em cada página e "
+    "os dados são salvos neste navegador. Os métodos e limites adotados são descritos junto "
+    "aos respectivos cálculos."
 )
