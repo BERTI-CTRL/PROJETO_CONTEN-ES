@@ -99,7 +99,7 @@ def _formatar_numero(valor: float | None, casas: int = 2) -> str:
 
 
 def _mostrar_perfil_cortina_em_balanco(
-    altura_livre_escavacao_m: float, resultado: dict[str, Any]
+    altura_livre_escavacao_m: float, resultado: dict[str, Any], chave_grafico: str
 ) -> None:
     profundidade_ponta_m = resultado["profundidade_ponta_m"]
     figura_perfil = go.Figure()
@@ -195,7 +195,7 @@ def _mostrar_perfil_cortina_em_balanco(
         paper_bgcolor="white",
         plot_bgcolor="white",
     )
-    st.plotly_chart(figura_perfil, width="stretch", theme=None)
+    st.plotly_chart(figura_perfil, width="stretch", theme=None, key=chave_grafico)
 
 
 def _mostrar_diagrama_pressao_cortina_em_balanco(resultado: dict[str, Any]) -> None:
@@ -276,7 +276,7 @@ def _mostrar_memoria_cortina_em_balanco(resultado: dict[str, Any]) -> None:
 
 
 def _mostrar_perfil_cortina_ancorada(
-    entradas: dict[str, Any], resultado: dict[str, Any]
+    entradas: dict[str, Any], resultado: dict[str, Any], chave_grafico: str
 ) -> None:
     profundidade_escavacao_m = resultado["profundidade_escavacao_abaixo_superficie_m"]
     profundidade_ponta_m = resultado["profundidade_ponta_abaixo_superficie_m"]
@@ -392,7 +392,7 @@ def _mostrar_perfil_cortina_ancorada(
         paper_bgcolor="white",
         plot_bgcolor="white",
     )
-    st.plotly_chart(figura_perfil, width="stretch", theme=None)
+    st.plotly_chart(figura_perfil, width="stretch", theme=None, key=chave_grafico)
 
 
 def _mostrar_diagrama_pressao_cortina_ancorada(resultado: dict[str, Any]) -> None:
@@ -611,6 +611,7 @@ with aba_balanco:
             _mostrar_perfil_cortina_em_balanco(
                 entradas_balanco_preview["altura_livre_escavacao_m"],
                 resultado_balanco_preview,
+                "croqui_previa_cortina_balanco",
             )
         with coluna_referencias:
             st.markdown("**Referências do croqui**")
@@ -703,7 +704,9 @@ with aba_balanco:
             "Desenho esquemático, sem escala horizontal."
         )
         _mostrar_perfil_cortina_em_balanco(
-            entradas_balanco["altura_livre_escavacao_m"], resultado_balanco
+            entradas_balanco["altura_livre_escavacao_m"],
+            resultado_balanco,
+            "resultado_perfil_cortina_balanco",
         )
         st.subheader("Diagrama de pressões")
         st.caption("As pressões ativas e passivas aparecem em lados opostos do eixo zero.")
@@ -721,7 +724,9 @@ with aba_ancorada:
         with coluna_croqui:
             st.markdown("**Croqui da cortina ancorada e das variáveis inseridas**")
             _mostrar_perfil_cortina_ancorada(
-                entradas_ancorada_preview, resultado_ancorada_preview
+                entradas_ancorada_preview,
+                resultado_ancorada_preview,
+                "croqui_previa_cortina_ancorada",
             )
         with coluna_referencias:
             st.markdown("**Referências do croqui**")
@@ -855,7 +860,11 @@ with aba_ancorada:
             "Solo retido à direita, escavação à esquerda e tirante acima do N.A. "
             "O desenho é esquemático e não representa escala horizontal."
         )
-        _mostrar_perfil_cortina_ancorada(entradas_ancorada, resultado_ancorada)
+        _mostrar_perfil_cortina_ancorada(
+            entradas_ancorada,
+            resultado_ancorada,
+            "resultado_perfil_cortina_ancorada",
+        )
         st.subheader("Diagrama de pressões")
         st.caption(
             "A pressão passiva está limitada à ficha abaixo da escavação. "
