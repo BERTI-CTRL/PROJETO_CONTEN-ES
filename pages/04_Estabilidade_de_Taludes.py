@@ -598,7 +598,8 @@ def _mostrar_croqui_entrada_talude(
         "As setas indicam dimensões e pontos; os valores detalhados ficam no painel ao lado. "
         "O arco e o raio representam o círculo crítico calculado, quando disponível. "
         f"A janela dos gráficos abaixo vai de x = {float(entradas_talude['limite_x_grafico_minimo_m']):g} "
-        f"a {float(entradas_talude['limite_x_grafico_maximo_m']):g} m."
+        f"a {float(entradas_talude['limite_x_grafico_maximo_m']):g} m, com extensão até a entrada "
+        "se o limite máximo informado não a incluir."
     )
 
 
@@ -642,7 +643,10 @@ def _mostrar_grafico_geometria(
     )
 
     x_minimo_m = float(entradas_talude["limite_x_grafico_minimo_m"])
-    x_maximo_m = float(entradas_talude["limite_x_grafico_maximo_m"])
+    x_maximo_m = max(
+        float(entradas_talude["limite_x_grafico_maximo_m"]),
+        float(resultado_talude["geometria"]["coordenada_x_entrada_m"]),
+    )
     cota_interface_m = resultado_talude["geometria"]["cota_interface_camadas_m"]
     figura_geometria.add_trace(
         go.Scatter(
@@ -793,7 +797,7 @@ def _mostrar_grafico_geometria(
                 x=x_meio_arco_critico,
                 y=_cota_arco(circulo_critico_malha, x_meio_arco_critico),
                 text=(
-                    "FS mínimo global = "
+                    "FS mínimo na malha = "
                     f"{circulo_critico_malha['fator_seguranca']:.3f}"
                 ),
                 showarrow=True,
@@ -910,8 +914,8 @@ def _mostrar_grafico_geometria(
     limite_y_minimo_m = menor_cota_m - 0.05 * max(1.0, maior_cota_m)
     limite_y_maximo_m = maior_cota_m * 1.1 + 0.1
     faixa_y_grafico_m = max(1.0, limite_y_maximo_m - limite_y_minimo_m)
-    altura_area_grafico_px = 1200 * faixa_y_grafico_m / faixa_x_grafico_m
-    altura_figura_px = min(2200, max(620, int(290 + altura_area_grafico_px)))
+    altura_area_grafico_px = 700 * faixa_y_grafico_m / faixa_x_grafico_m
+    altura_figura_px = min(1450, max(620, int(290 + altura_area_grafico_px)))
 
     figura_geometria.update_layout(
         title="Perfil, superfícies de ruptura e linhas de mesmo FS",
@@ -1567,20 +1571,29 @@ else:
         colunas_resultado[3].metric(
             "Centro y_c", f"{_formatar_numero(circulo_critico['centro_y_m'])} m"
         )
-        arquivo_dxf_talude = gerar_desenho_talude_dxf(
-            entradas_talude, resultado_talude, circulo_critico
-        )
-        st.download_button(
-            "Baixar perfil CAD (.dxf)",
-            data=arquivo_dxf_talude,
-            file_name=f"perfil_talude_{circulo_critico['identificacao'].lower()}.dxf",
-            mime="application/dxf",
-            help="DXF em metros com perfil, cotas, círculo, fatias e memória completa. Use as polilinhas fechadas da camada AREA_CONFERENCIA para conferir cada área com AREA > Objeto.",
-        )
-        st.caption(
-            "No DXF, a camada AREA_CONFERENCIA contém uma polilinha fechada por fatia. "
-            "Use AREA > Objeto e compare com Atotal de cada fatia no memorial."
-        )
+        if circulo_desenhado and circulo_desenhado["situacao"] == "VÁLIDO":
+            arquivo_dxf_talude = gerar_desenho_talude_dxf(
+                entradas_talude, resultado_talude, circulo_desenhado
+            )
+            st.download_button(
+                "Baixar CAD do círculo selecionado (.dxf)",
+                data=arquivo_dxf_talude,
+                file_name=(
+                    f"perfil_talude_{circulo_desenhado['identificacao'].lower()}.dxf"
+                ),
+                mime="application/dxf",
+                help="O DXF usa o círculo escolhido no campo 'Círculo para analisar'. Inclui o perfil, as fatias e a memória completa.",
+                key="baixar_dxf_circulo_selecionado_talude",
+            )
+            st.caption(
+                "No DXF, a camada AREA_CONFERENCIA contém uma polilinha fechada por fatia. "
+                "Use AREA > Objeto e compare com Atotal de cada fatia no memorial."
+            )
+        elif circulo_desenhado:
+            st.info(
+                "O CAD fica disponível para círculos válidos. Este raio foi marcado como "
+                f"{circulo_desenhado['situacao']} e não entra no cálculo do FS crítico."
+            )
     else:
         st.warning("Nenhum dos raios candidatos produziu um círculo válido. Ajuste os raios ou a geometria.")
 

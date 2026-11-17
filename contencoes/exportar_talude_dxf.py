@@ -26,7 +26,7 @@ def gerar_desenho_talude_dxf(
     _criar_camadas(documento)
 
     _desenhar_perfil(espaco_modelo, entradas_talude, resultado_talude)
-    _desenhar_circulo_critico(espaco_modelo, circulo)
+    _desenhar_circulo_analisado(espaco_modelo, circulo)
 
     fatias = circulo["fatias"]
     deslocamento_area_m = _desenhar_fatias(
@@ -51,7 +51,7 @@ def _criar_camadas(documento: ezdxf.document.Drawing) -> None:
         "TERRENO": (3, "CONTINUOUS"),
         "CAMADAS": (30, "DASHED"),
         "NIVEL_AGUA": (5, "DASHDOT"),
-        "CIRCULO_CRITICO": (1, "CONTINUOUS"),
+        "CIRCULO_ANALISADO": (1, "CONTINUOUS"),
         "CENTRO_CIRCULO": (7, "CONTINUOUS"),
         "FATIAS_GEOMETRIA": (8, "CONTINUOUS"),
         "AREA_CONFERENCIA": (2, "CONTINUOUS"),
@@ -72,7 +72,10 @@ def _desenhar_perfil(
     )
 
     x_minimo_m = float(entradas_talude["limite_x_grafico_minimo_m"])
-    x_maximo_m = float(entradas_talude["limite_x_grafico_maximo_m"])
+    x_maximo_m = max(
+        float(entradas_talude["limite_x_grafico_maximo_m"]),
+        float(resultado_talude["geometria"]["coordenada_x_entrada_m"]),
+    )
     cota_interface_m = float(resultado_talude["geometria"]["cota_interface_camadas_m"])
     espaco_modelo.add_line(
         (x_minimo_m, cota_interface_m),
@@ -103,7 +106,7 @@ def _desenhar_perfil(
         )
 
 
-def _desenhar_circulo_critico(espaco_modelo: Any, circulo: dict[str, Any]) -> None:
+def _desenhar_circulo_analisado(espaco_modelo: Any, circulo: dict[str, Any]) -> None:
     x_saida_m = float(circulo["x_saida_m"])
     x_entrada_m = float(circulo["x_entrada_m"])
     centro_x_m = float(circulo["centro_x_m"])
@@ -120,7 +123,7 @@ def _desenhar_circulo_critico(espaco_modelo: Any, circulo: dict[str, Any]) -> No
         coordenada_y_m = centro_y_m - radicando_arco**0.5
         pontos_arco.append((coordenada_x_m, coordenada_y_m))
     espaco_modelo.add_lwpolyline(
-        pontos_arco, dxfattribs={"layer": "CIRCULO_CRITICO"}
+        pontos_arco, dxfattribs={"layer": "CIRCULO_ANALISADO"}
     )
     espaco_modelo.add_circle(
         (centro_x_m, centro_y_m),
@@ -306,7 +309,7 @@ def _adicionar_memoria_completa(
     y_atual_m -= altura_titulo_m * 1.7
     _adicionar_texto(
         espaco_modelo,
-        f"Circulo critico {circulo['identificacao']} | Metodo de Fellenius | unidades: m, m2, kN/m, kPa e graus",
+        f"Circulo analisado {circulo['identificacao']} | Metodo de Fellenius | unidades: m, m2, kN/m, kPa e graus",
         (x_memorial_m, y_atual_m),
         altura_texto_m * 1.15,
         "MEMORIAL",
@@ -416,7 +419,7 @@ def _criar_linhas_memoria(
         f"No painel AREA_CONFERENCIA as cotas y foram deslocadas {deslocamento_area_m:.3f} m para separar o desenho; AREA > Objeto retorna a soma das 4 parcelas trapezoidais.",
     ]
     resultado_global = [
-        f"Circulo critico {circulo['identificacao']}: R={raio_m:.4f} m; centro C=({centro_x_m:.4f}; {centro_y_m:.4f}) m.",
+        f"Circulo analisado {circulo['identificacao']}: R={raio_m:.4f} m; centro C=({centro_x_m:.4f}; {centro_y_m:.4f}) m.",
         f"Soma resistente={float(circulo['resistencia_total_kN_m']):.4f} kN/m; soma mobilizada={float(circulo['forca_mobilizada_total_kN_m']):.4f} kN/m.",
         f"FS=sum(FR)/sum(Fmob)={float(circulo['resistencia_total_kN_m']):.4f}/{float(circulo['forca_mobilizada_total_kN_m']):.4f}={fator_seguranca:.5f}.",
     ]

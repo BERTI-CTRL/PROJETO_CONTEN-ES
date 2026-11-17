@@ -789,12 +789,17 @@ def _criar_perfil_para_grafico(entradas_talude: dict[str, Any]) -> list[dict[str
         float(entradas_talude["altura_talude_m"])
         * float(entradas_talude["relacao_horizontal_vertical_face"])
     )
+    coordenada_x_entrada_m = (
+        comprimento_horizontal_face_m
+        + float(entradas_talude["distancia_crista_entrada_m"])
+    )
     coordenadas_x = sorted(
         {
             x_minimo_m,
             x_maximo_m,
             0.0,
             comprimento_horizontal_face_m,
+            coordenada_x_entrada_m,
         }
     )
     return [
