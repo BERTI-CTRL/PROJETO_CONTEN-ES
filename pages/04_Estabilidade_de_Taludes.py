@@ -128,12 +128,12 @@ def _mostrar_croqui_entrada_talude(
     x_min = min(x_saida, -altura * 0.55, 0.0) - max(altura * 0.08, 0.5)
     x_max = max(largura_face, x_entrada) + max(altura * 0.55, 2.0)
     y_min = -altura * 0.22
-    y_max = max(altura, float(geometria["cota_entrada_m"])) + altura * 0.65
+    y_max = max(altura, float(geometria["cota_entrada_m"])) + altura * 0.8
     if geometria["cota_nivel_agua_m"] is not None:
         y_min = min(y_min, float(geometria["cota_nivel_agua_m"]) - altura * 0.05)
     if circulo and circulo.get("centro_x_m") is not None:
         y_min = min(y_min, min(_coordenadas_arco_y(circulo)) - altura * 0.05)
-        y_max = max(y_max, float(circulo["centro_y_m"]) + altura * 0.05)
+        y_max = max(y_max, float(circulo["centro_y_m"]) + altura * 0.22)
 
     def cota_terreno(x: float) -> float:
         if x <= 0:
@@ -362,7 +362,7 @@ def _mostrar_croqui_entrada_talude(
         altura,
         f"h₁ = {float(entradas_talude['espessura_camada_superior_m']):g} m",
         cor="#9b6b20",
-        deslocamento_rotulo=(-altura * 0.1, 0),
+        deslocamento_rotulo=(-altura * 0.8, 0),
     )
 
     beta = float(entradas_talude["inclinacao_terreno_montante_graus"])
@@ -392,7 +392,7 @@ def _mostrar_croqui_entrada_talude(
     )
 
     if cota_agua is not None:
-        x_cota_agua = largura_face - altura * 0.32
+        x_cota_agua = -altura * 0.2
         indicar_dimensao(
             x_cota_agua,
             altura,
@@ -400,7 +400,7 @@ def _mostrar_croqui_entrada_talude(
             float(cota_agua),
             f"zNA = {float(entradas_talude['profundidade_nivel_agua_abaixo_crista_m']):g} m",
             cor="#367da8",
-            deslocamento_rotulo=(0.65, 0),
+            deslocamento_rotulo=(-0.55, 0),
         )
         figura.add_annotation(
             x=x_max - altura * 0.08,
@@ -425,10 +425,27 @@ def _mostrar_croqui_entrada_talude(
             font={"color": "#367da8", "size": 10},
         )
 
+    largura_crista = max(0.0, x_entrada - largura_face)
+    x_rotulo_camada = largura_face + largura_crista * 0.62
+    figura.add_annotation(
+        x=x_rotulo_camada,
+        y=y_interface + float(entradas_talude["espessura_camada_superior_m"]) * 0.5,
+        text="Camada 1",
+        showarrow=False,
+        font={"color": "#367da8", "size": 10},
+    )
+    figura.add_annotation(
+        x=x_rotulo_camada,
+        y=y_interface - min(altura * 0.08, y_interface * 0.35),
+        text="Camada 2",
+        showarrow=False,
+        font={"color": "#815f32", "size": 10},
+    )
+
     if sobrecarga > 0:
         figura.add_annotation(
             x=sum(pontos_carga) / len(pontos_carga),
-            y=altura + altura * 0.32,
+            y=altura + altura * 0.5,
             text=f"<b>q = {sobrecarga:g} kPa</b>",
             showarrow=True,
             arrowhead=2,
@@ -442,40 +459,11 @@ def _mostrar_croqui_entrada_talude(
     else:
         figura.add_annotation(
             x=largura_face,
-            y=altura + altura * 0.2,
+            y=altura + altura * 0.5,
             text="q = 0 kPa",
             showarrow=False,
             bgcolor="rgba(255,255,255,0.9)",
             font={"color": "#bd5948", "size": 10},
-        )
-
-    largura_solo = x_entrada - largura_face
-    x_rotulo_solos = (
-        largura_face + largura_solo * 0.55
-        if largura_solo > 0
-        else largura_face + 0.05 * altura
-    )
-    for numero, sufixo, y_rotulo, cor in (
-        (1, "superior", y_interface + float(entradas_talude["espessura_camada_superior_m"]) * 0.55, "#367da8"),
-        (2, "inferior", y_interface - min(0.5 * float(entradas_talude["espessura_camada_superior_m"]), altura * 0.2), "#815f32"),
-    ):
-        figura.add_annotation(
-            x=x_rotulo_solos,
-            y=y_rotulo,
-            text=(
-                f"<b>Camada {numero}</b><br>"
-                f"γnat = {float(entradas_talude[f'peso_especifico_natural_camada_{sufixo}_kN_m3']):g}; "
-                f"γsat = {float(entradas_talude[f'peso_especifico_saturado_camada_{sufixo}_kN_m3']):g} kN/m³<br>"
-                f"c′ = {float(entradas_talude[f'coesao_efetiva_camada_{sufixo}_kPa']):g} kPa; "
-                f"φ′ = {float(entradas_talude[f'angulo_atrito_efetivo_camada_{sufixo}_graus']):g}°"
-            ),
-            showarrow=False,
-            align="left",
-            bgcolor="rgba(255,255,255,0.9)",
-            bordercolor=cor,
-            borderwidth=1,
-            borderpad=4,
-            font={"color": cor, "size": 9},
         )
 
     if circulo and circulo.get("centro_x_m") is not None:
@@ -489,19 +477,6 @@ def _mostrar_croqui_entrada_talude(
             f"R = {float(circulo['raio_m']):g} m",
             cor="#bd5948",
             deslocamento_rotulo=(0, -altura * 0.08),
-        )
-        figura.add_annotation(
-            x=x_centro,
-            y=y_centro,
-            text=f"C ({x_centro:g}, {y_centro:g}) m",
-            showarrow=True,
-            arrowhead=2,
-            ax=-38,
-            ay=-24,
-            bgcolor="rgba(255,255,255,0.92)",
-            bordercolor="#17374c",
-            borderpad=3,
-            font={"color": "#17374c", "size": 10},
         )
 
     x_meio_fatias = (x_saida + x_entrada) / 2
@@ -553,39 +528,6 @@ def _mostrar_croqui_entrada_talude(
         bgcolor="rgba(255,255,255,0.92)",
         font={"color": "#17374c", "size": 9},
     )
-    if circulo and circulo.get("fatias"):
-        fatia_referencia = circulo["fatias"][len(circulo["fatias"]) // 2]
-        figura.add_annotation(
-            x=float(fatia_referencia["x_medio_m"]),
-            y=(float(fatia_referencia["cota_topo_m"]) + float(fatia_referencia["cota_base_m"])) / 2,
-            text=(
-                f"<b>Fatia {int(fatia_referencia['numero_fatia'])}</b><br>"
-                f"Wᵢ = {float(fatia_referencia['peso_fatia_kN_m']):g} kN/m<br>"
-                f"αᵢ = {float(fatia_referencia['angulo_base_medio_graus']):g}°; "
-                f"ΔLᵢ = {float(fatia_referencia['comprimento_arco_m']):g} m<br>"
-                f"uᵢ = {float(fatia_referencia['pressao_neutra_kPa']):g} kPa"
-            ),
-            showarrow=True,
-            arrowhead=2,
-            ax=75,
-            ay=30,
-            bgcolor="rgba(255,255,255,0.94)",
-            bordercolor="#82918f",
-            borderwidth=1,
-            borderpad=4,
-            align="left",
-            font={"color": "#596a77", "size": 9},
-        )
-        figura.add_annotation(
-            x=x_max - altura * 0.2,
-            y=y_max - altura * 0.1,
-            text=f"FS crítico = {float(circulo['fator_seguranca']):g}",
-            showarrow=False,
-            bgcolor="rgba(255,255,255,0.94)",
-            bordercolor="#bd5948",
-            borderpad=3,
-            font={"color": "#bd5948", "size": 10},
-        )
     coluna_figura, coluna_simbolos = st.columns([2.35, 1], vertical_alignment="center")
     with coluna_figura:
         st.markdown("**Croqui da geometria e dos parâmetros inseridos**")
@@ -612,24 +554,49 @@ def _mostrar_croqui_entrada_talude(
             _formatar_numero(float(raio), 2)
             for raio in entradas_talude["raios_candidatos_m"]
         )
+        parametros_camadas = []
+        for numero, sufixo in ((1, "superior"), (2, "inferior")):
+            parametros_camadas.append(
+                f"**Camada {numero}** · γnat/γsat = "
+                f"{float(entradas_talude[f'peso_especifico_natural_camada_{sufixo}_kN_m3']):g}/"
+                f"{float(entradas_talude[f'peso_especifico_saturado_camada_{sufixo}_kN_m3']):g} kN/m³ · "
+                f"c′ = {float(entradas_talude[f'coesao_efetiva_camada_{sufixo}_kPa']):g} kPa · "
+                f"φ′ = {float(entradas_talude[f'angulo_atrito_efetivo_camada_{sufixo}_graus']):g}°"
+            )
+        if circulo and circulo.get("fatias"):
+            fatia_referencia = circulo["fatias"][len(circulo["fatias"]) // 2]
+            texto_fatia = (
+                f"Fatia {int(fatia_referencia['numero_fatia'])}: "
+                f"Wᵢ = {float(fatia_referencia['peso_fatia_kN_m']):g} kN/m · "
+                f"αᵢ = {float(fatia_referencia['angulo_base_medio_graus']):g}° · "
+                f"ΔLᵢ = {float(fatia_referencia['comprimento_arco_m']):g} m · "
+                f"uᵢ = {float(fatia_referencia['pressao_neutra_kPa']):g} kPa"
+            )
+            texto_circulo = (
+                f"R = {float(circulo['raio_m']):g} m · "
+                f"C = ({float(circulo['centro_x_m']):g}; {float(circulo['centro_y_m']):g}) m · "
+                f"FS = {float(circulo['fator_seguranca']):g}"
+            )
+        else:
+            texto_fatia = "Sem fatia de referência disponível."
+            texto_circulo = "Sem círculo crítico válido."
         st.markdown(
-            "**Símbolos e o que representam**\n\n"
+            "**Referências e valores**\n\n"
             "**GEOMETRIA**\n\n"
-            "H: altura; H:V: inclinação da face; β: inclinação a montante; "
-            "a: crista até a entrada; Lᵦ: pé até a saída; h₁: camada superior; "
-            "zNA: profundidade do nível d’água. E marca o ponto de entrada.\n\n"
+            "H: altura · H:V: face · β: terreno a montante · a: crista–entrada · "
+            "Lᵦ: pé–saída · h₁: camada superior · zNA: profundidade do N.A. · "
+            f"γw = {float(entradas_talude['peso_especifico_agua_kN_m3']):g} kN/m³\n\n"
+            "**SOLO**\n\n"
+            f"{parametros_camadas[0]}\n\n{parametros_camadas[1]}\n\n"
+            "γnat/γsat: pesos específicos natural/saturado · c′: coesão · φ′: atrito.\n\n"
             "**CÍRCULO E FATIAS**\n\n"
-            "R: raio crítico; C: centro; n: número de fatias; Wᵢ: peso; "
-            "αᵢ: ângulo da base; ΔLᵢ: comprimento curvo da base; "
-            "uᵢ: pressão da água na base; FS: fator de segurança.\n\n"
-            "**SOLO E ÁGUA**\n\n"
-            "γnat/γsat: pesos específicos natural/saturado; c′: coesão; "
-            "φ′: atrito; γw: peso específico da água.\n\n"
+            f"{texto_circulo}\n\n{texto_fatia}\n\n"
+            f"n = {int(entradas_talude['quantidade_fatias'])} fatias · FS: fator de segurança.\n\n"
             f"**Raios candidatos (m)**\n\n{raios_candidatos}"
         )
     st.caption(
-        "As setas identificam as dimensões e os pontos principais. As caixas mostram os parâmetros "
-        "das camadas; o arco e o raio representam o círculo crítico calculado, quando disponível. "
+        "As setas indicam dimensões e pontos; os valores detalhados ficam no painel ao lado. "
+        "O arco e o raio representam o círculo crítico calculado, quando disponível. "
         f"A janela dos gráficos abaixo vai de x = {float(entradas_talude['limite_x_grafico_minimo_m']):g} "
         f"a {float(entradas_talude['limite_x_grafico_maximo_m']):g} m."
     )
