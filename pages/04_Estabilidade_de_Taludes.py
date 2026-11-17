@@ -882,10 +882,16 @@ def _mostrar_grafico_geometria(
     menor_cota_m = min(coordenadas_perfil_y + [0.0])
     if circulo_selecionado and circulo_selecionado["centro_y_m"] is not None:
         menor_cota_m = min(menor_cota_m, *_coordenadas_arco_y(circulo_selecionado))
+    faixa_x_grafico_m = max(1.0, x_maximo_m - x_minimo_m)
+    limite_y_minimo_m = menor_cota_m - 0.05 * max(1.0, maior_cota_m)
+    limite_y_maximo_m = maior_cota_m * 1.1 + 0.1
+    faixa_y_grafico_m = max(1.0, limite_y_maximo_m - limite_y_minimo_m)
+    altura_area_grafico_px = 1200 * faixa_y_grafico_m / faixa_x_grafico_m
+    altura_figura_px = min(2200, max(620, int(290 + altura_area_grafico_px)))
 
     figura_geometria.update_layout(
         title="Perfil, superfícies de ruptura e linhas de mesmo FS",
-        height=620,
+        height=altura_figura_px,
         margin={"l": 55, "r": 25, "t": 65, "b": 225},
         xaxis_title="Distância horizontal x (m), origem no pé do talude",
         yaxis_title="Cota y (m)",
@@ -908,7 +914,7 @@ def _mostrar_grafico_geometria(
         constrain="domain",
     )
     figura_geometria.update_yaxes(
-        range=[menor_cota_m - 0.05 * max(1.0, maior_cota_m), maior_cota_m * 1.1 + 0.1]
+        range=[limite_y_minimo_m, limite_y_maximo_m]
     )
     st.plotly_chart(
         figura_geometria,
