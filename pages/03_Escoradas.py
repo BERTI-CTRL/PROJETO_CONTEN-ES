@@ -127,6 +127,195 @@ def _mostrar_grafico_pressao(
     st.plotly_chart(figura, width="stretch", theme=None)
 
 
+def _montar_croqui_escoramento(entradas: dict[str, Any]) -> go.Figure:
+    altura_m = float(entradas["altura_escavacao_m"])
+    quantidade_escoras = int(entradas["quantidade_niveis_escora"])
+    profundidade_na_m = float(entradas["profundidade_nivel_agua_m"])
+    figura = go.Figure()
+    figura.add_shape(
+        type="rect",
+        x0=-4.0,
+        x1=0,
+        y0=-1.45 * altura_m,
+        y1=0,
+        fillcolor="rgba(217, 144, 40, 0.20)",
+        line={"width": 0},
+        layer="below",
+    )
+    figura.add_shape(
+        type="rect",
+        x0=0,
+        x1=4.0,
+        y0=-altura_m,
+        y1=0,
+        fillcolor="rgba(62, 141, 193, 0.10)",
+        line={"width": 0},
+        layer="below",
+    )
+    figura.add_shape(
+        type="rect",
+        x0=-4.0,
+        x1=4.0,
+        y0=-1.45 * altura_m,
+        y1=-altura_m,
+        fillcolor="rgba(217, 144, 40, 0.10)",
+        line={"width": 0},
+        layer="below",
+    )
+    figura.add_shape(
+        type="line",
+        x0=0,
+        x1=0,
+        y0=0.6,
+        y1=-1.4 * altura_m,
+        line={"color": "#17374c", "width": 5},
+    )
+    figura.add_shape(
+        type="line",
+        x0=4.0,
+        x1=4.0,
+        y0=0,
+        y1=-altura_m,
+        line={"color": "#17374c", "width": 4},
+    )
+    figura.add_shape(
+        type="line",
+        x0=-4.0,
+        x1=0,
+        y0=0,
+        y1=0,
+        line={"color": "#176452", "width": 3},
+    )
+    figura.add_shape(
+        type="line",
+        x0=0,
+        x1=4.0,
+        y0=-altura_m,
+        y1=-altura_m,
+        line={"color": "#687a80", "width": 3, "dash": "dash"},
+    )
+    for nivel in range(1, quantidade_escoras + 1):
+        cota_escora_m = -altura_m * nivel / (quantidade_escoras + 1)
+        figura.add_shape(
+            type="line",
+            x0=0,
+            x1=4.0,
+            y0=cota_escora_m,
+            y1=cota_escora_m,
+            line={"color": "#2678b8", "width": 4},
+        )
+        figura.add_trace(
+            go.Scatter(
+                x=[0, 4.0],
+                y=[cota_escora_m, cota_escora_m],
+                mode="markers",
+                marker={"color": "#2678b8", "size": 8, "symbol": "circle"},
+                showlegend=False,
+                hovertemplate=f"Nível de escora {nivel}<extra></extra>",
+            )
+        )
+    if float(entradas["sobrecarga_superficie_kPa"]) > 0:
+        for x_seta_m in (-3.4, -2.5, -1.6, -0.7):
+            figura.add_annotation(
+                x=x_seta_m,
+                y=0,
+                ax=x_seta_m,
+                ay=0.8,
+                xref="x",
+                yref="y",
+                axref="x",
+                ayref="y",
+                text="",
+                showarrow=True,
+                arrowhead=2,
+                arrowcolor="#c56d16",
+                arrowwidth=2,
+            )
+    if 0 < profundidade_na_m < 1.45 * altura_m:
+        figura.add_shape(
+            type="line",
+            x0=-4.0,
+            x1=4.0,
+            y0=-profundidade_na_m,
+            y1=-profundidade_na_m,
+            line={"color": "#1479a6", "width": 2, "dash": "dash"},
+        )
+        figura.add_annotation(
+            x=-3.7,
+            y=-profundidade_na_m,
+            text=f"N.A. · zNA = {profundidade_na_m:.2f} m",
+            showarrow=False,
+            yshift=12,
+            font={"color": "#075d82", "size": 10},
+            bgcolor="rgba(255,255,255,0.82)",
+        )
+    figura.add_annotation(
+        x=0,
+        y=-altura_m,
+        text=f"H = {altura_m:.2f} m",
+        showarrow=True,
+        arrowhead=2,
+        ax=-48,
+        ay=0,
+        font={"color": "#17374c", "size": 11},
+    )
+    figura.add_annotation(
+        x=2.0,
+        y=0,
+        text=f"q = {float(entradas['sobrecarga_superficie_kPa']):.1f} kPa",
+        showarrow=False,
+        yshift=24,
+        font={"color": "#9a4d08", "size": 11},
+        bgcolor="rgba(255,255,255,0.82)",
+    )
+    figura.add_annotation(
+        x=2.0,
+        y=-0.75 * altura_m,
+        text=f"{quantidade_escoras} níveis de escoras",
+        showarrow=False,
+        font={"color": "#1e5c91", "size": 11},
+        bgcolor="rgba(255,255,255,0.82)",
+    )
+    figura.update_layout(
+        title="Seção esquemática da escavação escorada",
+        height=430,
+        margin={"l": 55, "r": 20, "t": 55, "b": 30},
+        paper_bgcolor="white",
+        plot_bgcolor="white",
+        showlegend=False,
+    )
+    figura.update_xaxes(range=[-4.2, 4.3], visible=False, zeroline=False)
+    figura.update_yaxes(range=[-1.5 * altura_m, 1.4], visible=False, zeroline=False)
+    return figura
+
+
+def _mostrar_croqui_escoramento(entradas: dict[str, Any]) -> None:
+    coluna_figura, coluna_referencias = st.columns([2.2, 1], vertical_alignment="center")
+    with coluna_figura:
+        st.markdown("**Croqui da escavação e das escoras**")
+        st.plotly_chart(
+            _montar_croqui_escoramento(entradas),
+            width="stretch",
+            theme=None,
+            config={"displayModeBar": False, "responsive": True},
+        )
+    with coluna_referencias:
+        st.markdown("**Referências do croqui**")
+        st.markdown(
+            f"- H: altura escavada = {_formatar_numero(entradas['altura_escavacao_m'])} m\n"
+            f"- n: níveis de escoras = {int(entradas['quantidade_niveis_escora'])}\n"
+            f"- q: sobrecarga = {_formatar_numero(entradas['sobrecarga_superficie_kPa'])} kPa\n"
+            f"- γ: peso específico = {_formatar_numero(entradas['peso_especifico_solo_kN_m3'])} kN/m³\n"
+            f"- φ: atrito = {_formatar_numero(entradas['angulo_atrito_solo_graus'], 1)}°\n"
+            f"- zNA: profundidade do N.A. = {_formatar_numero(entradas['profundidade_nivel_agua_m'])} m\n"
+            f"- e: espaçamento longitudinal = {_formatar_numero(entradas['espacamento_longitudinal_escoras_m'])} m\n"
+            f"- Modelo de solo: {entradas['tipo_solo']}\n"
+            f"- cu = {_formatar_numero(entradas['coesao_nao_drenada_kPa'])} kPa · "
+            f"m = {_formatar_numero(entradas['coeficiente_empirico_argila'], 2)} · "
+            f"γw = {_formatar_numero(entradas['peso_especifico_agua_kN_m3'])} kN/m³"
+        )
+
+
 armazenamento_local = LocalStorage(key="armazenamento_contencoes")
 aviso_armazenamento = None
 if "dados_escoradas_inicializados" not in st.session_state:
@@ -186,6 +375,17 @@ aba_pressao, aba_fundo, aba_graux, aba_froehlich = st.tabs(
 
 with aba_pressao:
     st.subheader("Pressão aparente e carga por escora")
+    entradas_pressao_preview = {
+        nome_campo: st.session_state[_chave_widget("pressao_aparente", nome_campo)]
+        for nome_campo in CAMPOS_POR_CASO["pressao_aparente"]
+    }
+    erros_pressao_preview = validar_pressao_aparente(entradas_pressao_preview)
+    resultado_pressao_preview = None
+    if not erros_pressao_preview:
+        resultado_pressao_preview = calcular_pressao_aparente(entradas_pressao_preview)
+        _mostrar_croqui_escoramento(entradas_pressao_preview)
+    else:
+        st.info("O croqui aparece quando os dados da escavação forem válidos.")
     colunas_entrada = st.columns(3)
     with colunas_entrada[0]:
         st.selectbox(
@@ -272,7 +472,7 @@ with aba_pressao:
     if erros_pressao:
         _mostrar_erros(erros_pressao)
     else:
-        resultado_pressao = calcular_pressao_aparente(entradas_pressao)
+        resultado_pressao = resultado_pressao_preview or calcular_pressao_aparente(entradas_pressao)
         st.divider()
         colunas_resultados = st.columns(5)
         colunas_resultados[0].metric(

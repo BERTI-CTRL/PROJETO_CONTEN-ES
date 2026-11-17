@@ -164,9 +164,22 @@ def _mostrar_perfil_cortina_em_balanco(
     figura_perfil.add_annotation(
         x=0.35,
         y=-profundidade_ponta_m,
-        text="Ponta · f",
-        showarrow=False,
+        text=f"Ponta · f = {resultado['ficha_preliminar_m']:.2f} m",
+        showarrow=True,
+        arrowhead=2,
+        ax=50,
+        ay=0,
         xanchor="left",
+    )
+    figura_perfil.add_annotation(
+        x=0,
+        y=-altura_livre_escavacao_m / 2,
+        text=f"h = {altura_livre_escavacao_m:.2f} m",
+        showarrow=True,
+        arrowhead=2,
+        ax=-48,
+        ay=0,
+        font={"color": "#17374c"},
     )
     figura_perfil.update_layout(
         title="Perfil esquemático da cortina em balanço",
@@ -346,6 +359,23 @@ def _mostrar_perfil_cortina_ancorada(
             text=texto,
             showarrow=False,
             xanchor="left" if x_m > 0 else "center",
+            bgcolor="rgba(255,255,255,0.82)",
+        )
+    for profundidade_m, texto in (
+        (profundidade_na_m, f"H₁ = {profundidade_na_m:.2f} m"),
+        (profundidade_escavacao_m, f"D = {entradas['profundidade_na_ate_escavacao_m']:.2f} m"),
+        (profundidade_ponta_m, f"f = {entradas['ficha_abaixo_escavacao_m']:.2f} m"),
+        (profundidade_ancoragem_m, f"hₐ = {entradas['altura_ancoragem_acima_na_m']:.2f} m acima do N.A."),
+    ):
+        figura_perfil.add_annotation(
+            x=0,
+            y=-profundidade_m,
+            text=texto,
+            showarrow=True,
+            arrowhead=2,
+            ax=-70,
+            ay=0,
+            font={"size": 10, "color": "#17374c"},
             bgcolor="rgba(255,255,255,0.82)",
         )
     figura_perfil.update_layout(
@@ -570,6 +600,30 @@ aba_balanco, aba_ancorada = st.tabs(["Cortina em balanço", "Cortina ancorada"])
 
 with aba_balanco:
     st.subheader("Entradas · solo granular homogêneo")
+    entradas_balanco_preview = _capturar_dados_dos_widgets()["cortina_em_balanco"]
+    erros_balanco_preview = validar_entradas_cortina_em_balanco(entradas_balanco_preview)
+    resultado_balanco_preview = None
+    if not erros_balanco_preview:
+        resultado_balanco_preview = calcular_cortina_em_balanco(entradas_balanco_preview)
+        coluna_croqui, coluna_referencias = st.columns([2.2, 1], vertical_alignment="center")
+        with coluna_croqui:
+            st.markdown("**Croqui da cortina e das variáveis inseridas**")
+            _mostrar_perfil_cortina_em_balanco(
+                entradas_balanco_preview["altura_livre_escavacao_m"],
+                resultado_balanco_preview,
+            )
+        with coluna_referencias:
+            st.markdown("**Referências do croqui**")
+            st.markdown(
+                f"- h: escavação = {_formatar_numero(entradas_balanco_preview['altura_livre_escavacao_m'])} m\n"
+                f"- f: ficha preliminar = {_formatar_numero(resultado_balanco_preview['ficha_preliminar_m'])} m\n"
+                f"- γ: peso específico = {_formatar_numero(entradas_balanco_preview['peso_especifico_solo_kN_m3'])} kN/m³\n"
+                f"- φ: atrito do solo = {_formatar_numero(entradas_balanco_preview['angulo_atrito_solo_graus'], 1)}°\n"
+                f"- Kₚ,mob: passivo mobilizado = {_formatar_numero(entradas_balanco_preview['percentual_passivo_mobilizado'], 1)}% de Kₚ\n"
+                f"- Acréscimo prático da ficha = {_formatar_numero(entradas_balanco_preview['percentual_acrescimo_ficha'], 1)}%"
+            )
+    else:
+        st.info("O croqui aparece quando os dados da cortina forem válidos.")
     colunas_entrada_balanco = st.columns(3)
     with colunas_entrada_balanco[0]:
         st.number_input(
@@ -619,7 +673,7 @@ with aba_balanco:
         for erro in erros_balanco:
             st.markdown(f"- {erro}")
     else:
-        resultado_balanco = calcular_cortina_em_balanco(entradas_balanco)
+        resultado_balanco = resultado_balanco_preview or calcular_cortina_em_balanco(entradas_balanco)
         st.divider()
         st.subheader("Resultados da ficha")
         colunas_resultado_balanco = st.columns(4)
@@ -658,6 +712,33 @@ with aba_balanco:
 
 with aba_ancorada:
     st.subheader("Entradas · duas camadas e ficha conhecida")
+    entradas_ancorada_preview = _capturar_dados_dos_widgets()["cortina_ancorada"]
+    erros_ancorada_preview = validar_entradas_cortina_ancorada(entradas_ancorada_preview)
+    resultado_ancorada_preview = None
+    if not erros_ancorada_preview:
+        resultado_ancorada_preview = calcular_cortina_ancorada(entradas_ancorada_preview)
+        coluna_croqui, coluna_referencias = st.columns([2.2, 1], vertical_alignment="center")
+        with coluna_croqui:
+            st.markdown("**Croqui da cortina ancorada e das variáveis inseridas**")
+            _mostrar_perfil_cortina_ancorada(
+                entradas_ancorada_preview, resultado_ancorada_preview
+            )
+        with coluna_referencias:
+            st.markdown("**Referências do croqui**")
+            st.markdown(
+                f"- q: sobrecarga = {_formatar_numero(entradas_ancorada_preview['sobrecarga_superficie_kPa'])} kPa\n"
+                f"- H₁: profundidade até o N.A. = {_formatar_numero(entradas_ancorada_preview['espessura_camada_superior_ate_na_m'])} m\n"
+                f"- D: N.A. até escavação = {_formatar_numero(entradas_ancorada_preview['profundidade_na_ate_escavacao_m'])} m\n"
+                f"- f: ficha abaixo da escavação = {_formatar_numero(entradas_ancorada_preview['ficha_abaixo_escavacao_m'])} m\n"
+                f"- hₐ: ancoragem acima do N.A. = {_formatar_numero(entradas_ancorada_preview['altura_ancoragem_acima_na_m'])} m\n"
+                f"- γ₁/γ₂: pesos específicos = {_formatar_numero(entradas_ancorada_preview['peso_especifico_solo_superior_kN_m3'])}/"
+                f"{_formatar_numero(entradas_ancorada_preview['peso_especifico_solo_submerso_kN_m3'])} kN/m³\n"
+                f"- φ: atrito = {_formatar_numero(entradas_ancorada_preview['angulo_atrito_solo_graus'], 1)}°\n"
+                f"- Passivo mobilizado = {_formatar_numero(entradas_ancorada_preview['percentual_passivo_mobilizado'], 1)}% · "
+                f"FS mínimo = {_formatar_numero(entradas_ancorada_preview['fator_seguranca_minimo_tombamento'], 2)}"
+            )
+    else:
+        st.info("O croqui aparece quando os dados da cortina ancorada forem válidos.")
     colunas_entrada_ancorada = st.columns(3)
     with colunas_entrada_ancorada[0]:
         st.number_input(
@@ -739,7 +820,7 @@ with aba_ancorada:
         for erro in erros_ancorada:
             st.markdown(f"- {erro}")
     else:
-        resultado_ancorada = calcular_cortina_ancorada(entradas_ancorada)
+        resultado_ancorada = resultado_ancorada_preview or calcular_cortina_ancorada(entradas_ancorada)
         st.divider()
         st.subheader("Resultados da cortina ancorada")
         colunas_resultado_ancorada = st.columns(4)
