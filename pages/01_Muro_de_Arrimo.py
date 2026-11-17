@@ -397,12 +397,148 @@ def _mostrar_graficos(
     figura_pressao.update_xaxes(rangemode="tozero", zeroline=True, zerolinecolor="#9ba9ac")
 
     st.markdown(
-        "**Esquema da seção** · As setas laranja representam a sobrecarga; "
-        "as cores separam as camadas e as zonas acima e abaixo do nível d’água. "
-        "Passe o cursor sobre o solo para consultar seus parâmetros."
+        "**Seção esquemática** · Muro à esquerda; tardoz, aterro e camadas à direita. "
+        "As setas indicam a sobrecarga uniforme."
     )
-    st.plotly_chart(figura_geometria, width="stretch", theme=None)
+    st.plotly_chart(
+        _montar_esquema_referencia(resultado_muro, entradas_muro, camadas_solo),
+        width="stretch",
+        theme=None,
+    )
     st.plotly_chart(figura_pressao, width="stretch", theme=None)
+
+
+def _montar_esquema_referencia(
+    resultado_muro: dict[str, Any],
+    entradas_muro: dict[str, Any],
+    camadas_solo: list[dict[str, Any]],
+) -> go.Figure:
+    """Desenha a seção no padrão da referência: muro à esquerda e solo à direita."""
+    altura_muro_m = float(entradas_muro["altura_muro_m"])
+    largura_base_m = float(entradas_muro["largura_base_m"])
+    largura_topo_m = float(entradas_muro["largura_topo_m"])
+    extensao_solo_m = max(2.2, altura_muro_m * 0.55)
+    x_limite_solo_m = largura_base_m + extensao_solo_m
+    inclinacao_aterro_rad = math.radians(
+        float(entradas_muro["inclinacao_aterro_graus"])
+    )
+    cota_superficie_lateral_m = altura_muro_m + extensao_solo_m * math.tan(
+        inclinacao_aterro_rad
+    )
+    nivel_agua_m = entradas_muro.get("profundidade_nivel_agua_m")
+    figura = go.Figure()
+    cores_naturais = ("#eadfc8", "#dfceb0", "#d4bd9b", "#c9ac87", "#be9b74", "#b38b66")
+    cores_saturadas = ("#c5dce5", "#b4d1dd", "#a4c6d5", "#94bbcd", "#84b0c5", "#74a5bd")
+
+    profundidade_acumulada_m = 0.0
+    for indice, camada in enumerate(camadas_solo, start=1):
+        espessura_m = float(camada["espessura_m"])
+        if espessura_m <= 0 or profundidade_acumulada_m >= altura_muro_m:
+            continue
+        topo_m = profundidade_acumulada_m
+        base_m = min(altura_muro_m, topo_m + espessura_m)
+        profundidade_acumulada_m += espessura_m
+        cortes = [topo_m, base_m]
+        if nivel_agua_m is not None and topo_m < float(nivel_agua_m) < base_m:
+            cortes.insert(1, float(nivel_agua_m))
+        for profundidade_topo_m, profundidade_base_m in zip(cortes, cortes[1:]):
+            saturada = nivel_agua_m is not None and (
+                profundidade_topo_m + profundidade_base_m
+            ) / 2 >= float(nivel_agua_m)
+            y_topo_m = altura_muro_m - profundidade_topo_m
+            y_base_m = altura_muro_m - profundidade_base_m
+            cor = (cores_saturadas if saturada else cores_naturais)[
+                (indice - 1) % len(cores_naturais)
+            ]
+            y_superficie_extremo_m = (
+                cota_superficie_lateral_m if profundidade_topo_m == 0 else y_topo_m
+            )
+            figura.add_trace(go.Scatter(
+                x=[largura_base_m, x_limite_solo_m, x_limite_solo_m, largura_base_m, largura_base_m],
+                y=[y_topo_m, y_superficie_extremo_m if profundidade_topo_m == 0 else y_topo_m, y_base_m, y_base_m, y_topo_m],
+                fill="toself", fillcolor=cor,
+                line={"color": "#807766", "width": 1}, mode="lines",
+                showlegend=False,
+                hovertemplate=(f"Camada {indice}<br>γ natural={float(camada['peso_especifico_natural_kN_m3']):.1f} kN/m³"
+                    f"<br>γ saturado={float(camada['peso_especifico_saturado_kN_m3']):.1f} kN/m³"
+                    f"<br>φ={float(camada['angulo_atrito_graus']):.1f}° · c={float(camada['coesao_kPa']):.1f} kPa<extra></extra>"),
+            ))
+        y_meio_m = altura_muro_m - (topo_m + base_m) / 2
+        figura.add_annotation(
+            x=largura_base_m + extensao_solo_m * 0.5, y=y_meio_m,
+            text=(f"CAMADA {indice}<br>γ={float(camada['peso_especifico_natural_kN_m3']):.1f} kN/m³"
+                  f"<br>φ={float(camada['angulo_atrito_graus']):.1f}°"),
+            showarrow=False, font={"size": 12, "color": "#34434a"},
+            bgcolor="rgba(255,255,255,0.65)",
+        )
+
+    figura.add_trace(go.Scatter(
+        x=[p["x_m"] for p in resultado_muro["geometria_muro"]],
+        y=[p["cota_y_m"] for p in resultado_muro["geometria_muro"]],
+        fill="toself", fillcolor="#b9b8b1", line={"color": "#303a3c", "width": 2.5},
+        mode="lines", name="Muro de concreto", hovertemplate="Muro de concreto<extra></extra>",
+    ))
+    figura.add_trace(go.Scatter(
+        x=[largura_base_m, x_limite_solo_m],
+        y=[altura_muro_m, cota_superficie_lateral_m], mode="lines",
+        line={"color": "#33434a", "width": 2}, name="Superfície do aterro",
+    ))
+    figura.add_trace(go.Scatter(
+        x=[largura_base_m, largura_base_m], y=[0, altura_muro_m], mode="lines",
+        line={"color": "#303a3c", "width": 2.5}, showlegend=False,
+    ))
+    if nivel_agua_m is not None:
+        cota_agua_m = altura_muro_m - float(nivel_agua_m)
+        figura.add_trace(go.Scatter(
+            x=[largura_base_m, x_limite_solo_m], y=[cota_agua_m, cota_agua_m],
+            mode="lines", line={"color": "#177ba0", "width": 2, "dash": "dash"},
+            name="Nível d’água",
+        ))
+        figura.add_annotation(x=x_limite_solo_m, y=cota_agua_m, text="N.A.", showarrow=False,
+                              xshift=-24, font={"color": "#126b89", "size": 12})
+    carga_q_kPa = float(entradas_muro["sobrecarga_kPa"])
+    if carga_q_kPa > 0:
+        for indice_seta in range(8):
+            x_seta_m = largura_base_m + (indice_seta + 0.5) * extensao_solo_m / 8
+            y_superficie_m = altura_muro_m + (x_seta_m - largura_base_m) * math.tan(inclinacao_aterro_rad)
+            figura.add_annotation(
+                x=x_seta_m, y=y_superficie_m, ax=x_seta_m,
+                ay=y_superficie_m + 0.8, xref="x", yref="y", axref="x", ayref="y",
+                text="", showarrow=True, arrowhead=2, arrowsize=1, arrowwidth=2,
+                arrowcolor="#2678b8",
+            )
+        figura.add_annotation(
+            x=largura_base_m + extensao_solo_m / 2,
+            y=cota_superficie_lateral_m + 1.0,
+            text=f"Sobrecarga uniforme  q = {carga_q_kPa:.1f} kN/m²",
+            showarrow=False, font={"size": 13, "color": "#225b86"},
+        )
+
+    geometria = resultado_muro["verificacoes"]
+    for y in (0,):
+        figura.add_shape(type="line", x0=-0.5, x1=x_limite_solo_m + 0.4, y0=y, y1=y,
+                         line={"color": "#66777b", "width": 1})
+    figura.add_annotation(x=largura_base_m / 2, y=-0.55,
+        text=f"Base b = {largura_base_m:.2f} m", showarrow=False, font={"size": 12})
+    figura.add_annotation(x=largura_base_m - largura_topo_m / 2, y=altura_muro_m + 0.15,
+        text=f"Topo = {largura_topo_m:.2f} m", showarrow=False, font={"size": 11})
+    figura.add_annotation(x=-0.45, y=altura_muro_m / 2,
+        text=f"Altura = {altura_muro_m:.2f} m", textangle=-90, showarrow=False, font={"size": 12})
+    figura.add_annotation(x=largura_base_m + extensao_solo_m / 2, y=-0.55,
+        text=f"f = {float(entradas_muro['coeficiente_atrito_base']):.2f}  ·  qadm = {float(entradas_muro['tensao_admissivel_fundacao_kPa']):.0f} kPa",
+        showarrow=False, font={"size": 11, "color": "#485a61"})
+    figura.add_annotation(x=largura_base_m * 0.48, y=altura_muro_m * 0.48,
+        text=f"MURO DE CONCRETO<br>γc = {float(entradas_muro['peso_especifico_concreto_kN_m3']):.1f} kN/m³",
+        showarrow=False, font={"size": 12, "color": "#303a3c"})
+    figura.update_layout(
+        title={"text": "SEÇÃO ESQUEMÁTICA · MURO DE ARRIMO", "x": 0.03},
+        height=560, margin={"l": 70, "r": 35, "t": 70, "b": 55},
+        paper_bgcolor="#fbfcfd", plot_bgcolor="#fbfcfd",
+        xaxis={"range": [-0.8, x_limite_solo_m + 0.5], "title": "Seção transversal (m)", "showgrid": False, "zeroline": False},
+        yaxis={"range": [-0.9, cota_superficie_lateral_m + 1.8], "title": "Cota (m)", "gridcolor": "#e3e9ec", "scaleanchor": "x", "scaleratio": 1},
+        showlegend=False,
+    )
+    return figura
 
 
 def _mostrar_memoria_calculo(resultado_muro: dict[str, Any]) -> None:
