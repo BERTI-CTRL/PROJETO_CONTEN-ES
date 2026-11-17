@@ -114,6 +114,146 @@ def _configuracao_download_png(nome_arquivo: str) -> dict[str, Any]:
     }
 
 
+def _mostrar_croqui_entrada_talude(
+    entradas_talude: dict[str, Any],
+    geometria: dict[str, Any],
+    circulo: dict[str, Any] | None,
+) -> None:
+    """Desenha um croqui esquemático que acompanha os dados da geometria."""
+    altura = float(entradas_talude["altura_talude_m"])
+    relacao_face = float(entradas_talude["relacao_horizontal_vertical_face"])
+    largura_face = altura * relacao_face
+    x_saida = -float(entradas_talude["distancia_pe_saida_m"])
+    x_entrada = float(geometria["coordenada_x_entrada_m"])
+    x_min = min(x_saida, 0.0) - max(altura * 0.12, 0.5)
+    x_max = max(largura_face, x_entrada) + max(altura * 0.18, 0.8)
+    y_min = -altura * 0.22
+    y_max = max(altura, float(geometria["cota_entrada_m"])) + altura * 0.25
+    if circulo and circulo.get("centro_x_m") is not None:
+        y_min = min(y_min, min(_coordenadas_arco_y(circulo)) - altura * 0.05)
+        y_max = max(y_max, float(circulo["centro_y_m"]) + altura * 0.05)
+    largura_svg, altura_svg = 800.0, 330.0
+    margem_x, margem_y = 48.0, 26.0
+    escala = min(
+        (largura_svg - 2 * margem_x) / max(x_max - x_min, 0.1),
+        (altura_svg - 2 * margem_y) / max(y_max - y_min, 0.1),
+    )
+    deslocamento_x = (largura_svg - (x_max - x_min) * escala) / 2
+    deslocamento_y = (altura_svg - (y_max - y_min) * escala) / 2
+
+    def sx(x: float) -> float:
+        return deslocamento_x + (x - x_min) * escala
+
+    def sy(y: float) -> float:
+        return altura_svg - deslocamento_y - (y - y_min) * escala
+
+    def cota_terreno(x: float) -> float:
+        if x <= 0:
+            return 0.0
+        if x <= largura_face:
+            return x / relacao_face
+        return altura + (x - largura_face) * math.tan(
+            math.radians(float(entradas_talude["inclinacao_terreno_montante_graus"]))
+        )
+
+    amostras = 48
+    pontos = [
+        (
+            x_min + (x_max - x_min) * indice / amostras,
+            cota_terreno(x_min + (x_max - x_min) * indice / amostras),
+        )
+        for indice in range(amostras + 1)
+    ]
+    perfil_svg = " ".join(f"{sx(x):.1f},{sy(y):.1f}" for x, y in pontos)
+    poligono_solo = f"{sx(x_min):.1f},{sy(y_min):.1f} {perfil_svg} {sx(x_max):.1f},{sy(y_min):.1f}"
+    y_interface = float(geometria["cota_interface_camadas_m"])
+    superior = [(x, y) for x, y in pontos if y >= y_interface]
+    if superior:
+        poligono_superior = (
+            f"{sx(superior[0][0]):.1f},{sy(y_interface):.1f} "
+            + " ".join(f"{sx(x):.1f},{sy(y):.1f}" for x, y in superior)
+            + f" {sx(superior[-1][0]):.1f},{sy(y_interface):.1f}"
+        )
+    else:
+        poligono_superior = ""
+
+    elementos = [
+        f'<svg viewBox="0 0 {largura_svg:.0f} {altura_svg:.0f}" role="img" aria-label="Croqui esquemático da geometria do talude, camadas, nível d’água e fatias" style="width:100%;height:auto;background:#fff">',
+        f'<polygon points="{poligono_solo}" fill="#f4ead8"/>',
+    ]
+    if poligono_superior:
+        elementos.append(f'<polygon points="{poligono_superior}" fill="#dceaf0"/>')
+    elementos.extend(
+        [
+            f'<line x1="{sx(x_min):.1f}" y1="{sy(y_interface):.1f}" x2="{sx(x_max):.1f}" y2="{sy(y_interface):.1f}" stroke="#d99028" stroke-width="2" stroke-dasharray="7 5"/>',
+            f'<polyline points="{perfil_svg}" fill="none" stroke="#398e79" stroke-width="4" stroke-linejoin="round"/>',
+        ]
+    )
+    cota_agua = geometria["cota_nivel_agua_m"]
+    if cota_agua is not None:
+        elementos.append(
+            f'<line x1="{sx(x_min):.1f}" y1="{sy(float(cota_agua)):.1f}" x2="{sx(x_max):.1f}" y2="{sy(float(cota_agua)):.1f}" stroke="#438fbd" stroke-width="2" stroke-dasharray="8 5"/>'
+        )
+
+    if circulo and circulo.get("centro_x_m") is not None:
+        numero_fatias = int(entradas_talude["quantidade_fatias"])
+        passo = (x_entrada - x_saida) / numero_fatias
+        arco = [
+            (x_saida + (x_entrada - x_saida) * indice / 80,
+             _cota_arco(circulo, x_saida + (x_entrada - x_saida) * indice / 80))
+            for indice in range(81)
+        ]
+        elementos.append(
+            f'<polyline points="{" ".join(f"{sx(x):.1f},{sy(y):.1f}" for x, y in arco)}" fill="none" stroke="#bd5948" stroke-width="3"/>'
+        )
+        for indice in range(numero_fatias + 1):
+            x_fatia = x_saida + indice * passo
+            y_base = _cota_arco(circulo, x_fatia)
+            elementos.append(
+                f'<line x1="{sx(x_fatia):.1f}" y1="{sy(y_base):.1f}" x2="{sx(x_fatia):.1f}" y2="{sy(cota_terreno(x_fatia)):.1f}" stroke="#82918f" stroke-width="1"/>'
+            )
+        cx, cy = float(circulo["centro_x_m"]), float(circulo["centro_y_m"])
+        elementos.append(f'<circle cx="{sx(cx):.1f}" cy="{sy(cy):.1f}" r="4" fill="#17374c"/>')
+        elementos.append(f'<text x="{sx(cx) + 7:.1f}" y="{sy(cy) - 6:.1f}" fill="#17374c" font-size="12">C</text>')
+
+    x_crista, y_crista = sx(largura_face), sy(altura)
+    elementos.extend(
+        [
+            f'<text x="{sx(x_saida) - 8:.1f}" y="{sy(0) + 18:.1f}" text-anchor="end" fill="#bd5948" font-size="12">saída</text>',
+            f'<text x="{sx(x_entrada) + 6:.1f}" y="{sy(float(geometria["cota_entrada_m"])) - 7:.1f}" fill="#bd5948" font-size="12">entrada</text>',
+            f'<text x="{x_crista + 5:.1f}" y="{y_crista - 8:.1f}" fill="#17374c" font-size="12">crista</text>',
+            f'<text x="{sx(max(0.0, largura_face * 0.45)):.1f}" y="{sy(y_interface) - 7:.1f}" fill="#9b6b20" font-size="12">interface · h₁ = {float(entradas_talude["espessura_camada_superior_m"]):g} m</text>',
+        ]
+    )
+    if cota_agua is not None:
+        elementos.append(f'<text x="{sx(x_min) + 5:.1f}" y="{sy(float(cota_agua)) - 7:.1f}" fill="#367da8" font-size="12">N.A.</text>')
+
+    sobrecarga = float(entradas_talude["sobrecarga_crista_kPa"])
+    if sobrecarga > 0:
+        for indice in range(3):
+            x = sx(largura_face * (0.28 + indice * 0.19))
+            elementos.append(f'<line x1="{x:.1f}" y1="{sy(altura) - 35:.1f}" x2="{x:.1f}" y2="{sy(altura) - 8:.1f}" stroke="#c45a4b" stroke-width="2" marker-end="url(#seta)"/>')
+        elementos.append(f'<text x="{sx(largura_face * 0.45):.1f}" y="{sy(altura) - 40:.1f}" text-anchor="middle" fill="#bd5948" font-size="13">q = {sobrecarga:g} kPa</text>')
+
+    elementos.append('<defs><marker id="seta" markerWidth="7" markerHeight="7" refX="3.5" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 Z" fill="#c45a4b"/></marker></defs>')
+    elementos.append('</svg>')
+    coluna_croqui, coluna_legenda = st.columns([2.3, 1], vertical_alignment="center")
+    with coluna_croqui:
+        st.markdown("**Croqui da geometria inserida**")
+        st.html("".join(elementos))
+    with coluna_legenda:
+        st.markdown(
+            "**Referências do croqui**\n\n"
+            f"- **H:** {altura:g} m · **H:V:** {relacao_face:g}\n"
+            f"- **β:** {float(entradas_talude['inclinacao_terreno_montante_graus']):g}°\n"
+            f"- **a:** {float(entradas_talude['distancia_crista_entrada_m']):g} m\n"
+            f"- **Lᵦ:** {float(entradas_talude['distancia_pe_saida_m']):g} m\n"
+            f"- **Fatias:** {int(entradas_talude['quantidade_fatias'])}\n"
+            "\nCamada superior em azul claro; camada inferior em areia."
+        )
+    st.caption("Croqui esquemático atualizado conforme os campos; o arco mostra o círculo crítico calculado, quando disponível.")
+
+
 def _cota_terreno_grafico(x_m: float, entradas_talude: dict[str, Any]) -> float:
     altura_talude_m = float(entradas_talude["altura_talude_m"])
     relacao_horizontal_vertical_face = float(
@@ -716,6 +856,15 @@ with coluna_referencia:
 
 with st.container(border=True):
     st.subheader("Geometria, água e discretização")
+    entradas_atuais_croqui = _capturar_dados_dos_widgets()
+    resultado_croqui = None
+    if not validar_entradas_talude(entradas_atuais_croqui):
+        resultado_croqui = calcular_estabilidade_talude(entradas_atuais_croqui)
+        _mostrar_croqui_entrada_talude(
+            entradas_atuais_croqui,
+            resultado_croqui["geometria"],
+            resultado_croqui["circulo_critico"],
+        )
     colunas_geometria = st.columns(4)
     colunas_geometria[0].number_input(
         "Altura do talude, H (m)", min_value=0.1, step=0.1, key="altura_talude_m"
@@ -845,7 +994,7 @@ if erros_entrada:
     for erro in erros_entrada:
         st.markdown(f"- {erro}")
 else:
-    resultado_talude = calcular_estabilidade_talude(entradas_talude)
+    resultado_talude = resultado_croqui or calcular_estabilidade_talude(entradas_talude)
     circulos = resultado_talude["circulos"]
     circulo_critico = resultado_talude["circulo_critico"]
     opcoes_circulos = ["Crítico"] + [circulo["identificacao"] for circulo in circulos]
