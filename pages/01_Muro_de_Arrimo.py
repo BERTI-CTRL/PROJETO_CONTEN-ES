@@ -498,15 +498,29 @@ def _montar_esquema_referencia(
                               xshift=-24, font={"color": "#126b89", "size": 12})
     carga_q_kPa = float(entradas_muro["sobrecarga_kPa"])
     if carga_q_kPa > 0:
+        posicoes_setas_m = []
+        hastes_x = []
+        hastes_y = []
         for indice_seta in range(8):
             x_seta_m = largura_base_m + (indice_seta + 0.5) * extensao_solo_m / 8
-            y_superficie_m = altura_muro_m + (x_seta_m - largura_base_m) * math.tan(inclinacao_aterro_rad)
-            figura.add_annotation(
-                x=x_seta_m, y=y_superficie_m, ax=x_seta_m,
-                ay=y_superficie_m + 0.8, xref="x", yref="y", axref="x", ayref="y",
-                text="", showarrow=True, arrowhead=2, arrowsize=1, arrowwidth=2,
-                arrowcolor="#2678b8",
-            )
+            y_superficie_m = altura_muro_m + (
+                x_seta_m - largura_base_m
+            ) * math.tan(inclinacao_aterro_rad)
+            posicoes_setas_m.append((x_seta_m, y_superficie_m))
+            hastes_x.extend((x_seta_m, x_seta_m, None))
+            hastes_y.extend((y_superficie_m + 0.8, y_superficie_m + 0.12, None))
+        figura.add_trace(go.Scatter(
+            x=hastes_x, y=hastes_y, mode="lines",
+            line={"color": "#2678b8", "width": 2.5},
+            hoverinfo="skip", showlegend=False,
+        ))
+        figura.add_trace(go.Scatter(
+            x=[posicao[0] for posicao in posicoes_setas_m],
+            y=[posicao[1] + 0.12 for posicao in posicoes_setas_m],
+            mode="markers",
+            marker={"symbol": "triangle-down", "size": 11, "color": "#2678b8"},
+            hoverinfo="skip", showlegend=False,
+        ))
         figura.add_annotation(
             x=largura_base_m + extensao_solo_m / 2,
             y=cota_superficie_lateral_m + 1.0,
