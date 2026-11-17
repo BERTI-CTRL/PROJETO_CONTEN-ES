@@ -222,23 +222,28 @@ def _mostrar_graficos(
         )
     )
     if float(entradas_muro["sobrecarga_kPa"]) > 0:
-        for numero_seta in range(4):
+        for numero_seta in range(7):
             x_seta_m = x_limite_solo_m + (numero_seta + 1) * (
                 x_tardoz_topo_m - x_limite_solo_m
-            ) / 5
+            ) / 8
             cota_superficie_seta_m = altura_muro_m + (
                 x_tardoz_topo_m - x_seta_m
             ) * math.tan(inclinacao_aterro_rad)
+            comprimento_seta_m = max(0.45, altura_muro_m * 0.1)
             figura_geometria.add_annotation(
                 x=x_seta_m,
                 y=cota_superficie_seta_m,
                 ax=x_seta_m,
-                ay=cota_superficie_seta_m + max(0.45, altura_muro_m * 0.1),
+                ay=cota_superficie_seta_m + comprimento_seta_m,
+                xref="x",
+                yref="y",
+                axref="x",
+                ayref="y",
                 text="",
                 showarrow=True,
                 arrowhead=2,
-                arrowsize=1.2,
-                arrowwidth=2,
+                arrowsize=1.1,
+                arrowwidth=2.4,
                 arrowcolor="#c56d16",
             )
         figura_geometria.add_annotation(
