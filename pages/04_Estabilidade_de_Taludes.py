@@ -16,6 +16,7 @@ from contencoes.calculos_estabilidade_taludes import (
     validar_entradas_talude,
 )
 from contencoes.exportar_talude_dxf import gerar_desenho_talude_dxf
+from contencoes.memorias_passo_a_passo import montar_memorial_passo_a_passo_talude
 
 
 st.set_page_config(page_title="Talude | Contenções", page_icon="⛰️", layout="wide")
@@ -1652,3 +1653,9 @@ else:
         "Não inclui Bishop, superfícies não circulares, sismo, fluxo não hidrostático "
         "ou busca automática dos pontos de entrada e saída."
     )
+    with st.expander("Memorial passo a passo · como fazer o cálculo à mão"):
+        st.markdown(
+            montar_memorial_passo_a_passo_talude(
+                entradas_talude, resultado_talude, circulo_desenhado
+            )
+        )

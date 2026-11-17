@@ -15,6 +15,7 @@ from contencoes.calculos_muro_de_arrimo import (
     validar_entradas_muro,
 )
 from contencoes.exportar_muro_arrimo_dxf import gerar_desenho_muro_dxf
+from contencoes.memorias_passo_a_passo import montar_memorial_passo_a_passo_muro
 
 
 st.set_page_config(page_title="Muro de arrimo | Contenções", page_icon="🧱", layout="wide")
@@ -984,3 +985,9 @@ else:
         "Limites desta fase: não inclui ruptura global, empuxo passivo à frente do muro "
         "ou dimensionamento estrutural do concreto armado."
     )
+    with st.expander("Memorial passo a passo · como fazer o cálculo à mão"):
+        st.markdown(
+            montar_memorial_passo_a_passo_muro(
+                entradas_muro, camadas_solo, resultado_muro
+            )
+        )

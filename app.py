@@ -150,3 +150,12 @@ st.markdown(
     "os dados são salvos neste navegador. Os métodos e limites adotados são descritos junto "
     "aos respectivos cálculos."
 )
+st.markdown("### Planilha de referência")
+st.markdown(
+    "Consulte a planilha usada como referência para acompanhar os cálculos do projeto."
+)
+st.link_button(
+    "Abrir planilha de referência",
+    "https://docs.google.com/spreadsheets/d/1hEL-d3-Uf1JkWKGu8rqwnLtDs7i2Cu2nXm7pedB8DSA/edit?usp=sharing",
+    icon="📊",
+)
