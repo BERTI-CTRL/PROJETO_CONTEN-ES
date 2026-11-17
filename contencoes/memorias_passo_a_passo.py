@@ -47,9 +47,20 @@ def montar_memorial_passo_a_passo_muro(
         f"$\\beta={_numero(entradas_muro['inclinacao_aterro_graus'])}^\\circ$ · "
         f"$\\delta={_numero(entradas_muro['atrito_solo_muro_graus'])}^\\circ$.",
         "As contas abaixo são por metro de comprimento do muro. Profundidades $z$ são medidas a partir do topo.",
-        "",
-        "### 1. Coeficiente de empuxo ativo",
+        f"Peso específico do concreto: $\\gamma_c={_numero(gamma_concreto)}$ kN/m³; "
+        f"peso específico da água: $\\gamma_w={_numero(gamma_agua)}$ kN/m³.",
+        "#### Propriedades das camadas",
     ]
+
+    for indice, camada in camadas_ativas:
+        linhas.append(
+            f"- **Camada {indice}:** espessura $h={_numero(camada['espessura_m'])}$ m; "
+            f"$\\gamma_{{nat}}={_numero(camada['peso_especifico_natural_kN_m3'])}$ kN/m³; "
+            f"$\\gamma_{{sat}}={_numero(camada['peso_especifico_saturado_kN_m3'])}$ kN/m³; "
+            f"$c={_numero(camada['coesao_kPa'])}$ kPa; "
+            f"$\\varphi'={_numero(camada['angulo_atrito_graus'])}^\\circ$."
+        )
+    linhas.extend(["", "### 1. Coeficiente de empuxo ativo"])
 
     if entradas_muro["metodo_empuxo"] == "Rankine":
         if abs(float(entradas_muro["inclinacao_aterro_graus"])) <= 1e-12:
@@ -97,29 +108,45 @@ def montar_memorial_passo_a_passo_muro(
             r"$p_q=K_aq$ e $u=\gamma_w\max(z-z_{NA},0)$; "
             r"a pressão lateral total é $p=p_s+p_q+u$.",
             "",
-            "| Trecho | $z_{sup}/z_{inf}$ (m) | $\\gamma'$ (kN/m³) | "
-            "$\\sigma'_{v,sup}/\\sigma'_{v,inf}$ (kPa) | $K_a$ | "
-            "$p_{s,sup}/p_{s,inf}$ (kPa) | $p_q$ (kPa) | $u_{sup}/u_{inf}$ (kPa) |",
-            "|---|---:|---:|---:|---:|---:|---:|---:|",
         ]
     )
     for trecho in trechos:
-        linhas.append(
-            "| {nome} | {z1}/{z2} | {gamma} | {sv1}/{sv2} | {ka} | {ps1}/{ps2} | {pq} | {u1}/{u2} |".format(
-                nome=trecho["identificacao_trecho"],
-                z1=_numero(trecho["profundidade_superior_m"]),
-                z2=_numero(trecho["profundidade_inferior_m"]),
-                gamma=_numero(trecho["peso_especifico_efetivo_kN_m3"]),
-                sv1=_numero(trecho["tensao_vertical_efetiva_superior_kPa"]),
-                sv2=_numero(trecho["tensao_vertical_efetiva_inferior_kPa"]),
-                ka=_numero(trecho["coeficiente_empuxo_ativo"], 4),
-                ps1=_numero(trecho["pressao_solo_superior_kPa"]),
-                ps2=_numero(trecho["pressao_solo_inferior_kPa"]),
-                pq=_numero(trecho["pressao_sobrecarga_kPa"]),
-                u1=_numero(trecho["pressao_agua_superior_kPa"]),
-                u2=_numero(trecho["pressao_agua_inferior_kPa"]),
-            )
+        ps_sup = trecho["pressao_solo_superior_kPa"]
+        ps_inf = trecho["pressao_solo_inferior_kPa"]
+        pq = trecho["pressao_sobrecarga_kPa"]
+        u_sup = trecho["pressao_agua_superior_kPa"]
+        u_inf = trecho["pressao_agua_inferior_kPa"]
+        camada_trecho = next(
+            (
+                camada
+                for indice, camada in camadas_ativas
+                if trecho["identificacao_trecho"].startswith(f"Camada {indice} /")
+            ),
+            None,
         )
+        coesao_trecho = float(camada_trecho["coesao_kPa"]) if camada_trecho else 0.0
+        ka_trecho = float(trecho["coeficiente_empuxo_ativo"])
+        sigma_sup = float(trecho["tensao_vertical_efetiva_superior_kPa"])
+        sigma_inf = float(trecho["tensao_vertical_efetiva_inferior_kPa"])
+        linhas.extend([
+            f"#### {trecho['identificacao_trecho']}",
+            f"Intervalo: $z={_numero(trecho['profundidade_superior_m'])}$ a "
+            f"{_numero(trecho['profundidade_inferior_m'])}$ m; "
+            f"$\\gamma'={_numero(trecho['peso_especifico_efetivo_kN_m3'])}$ kN/m³; "
+            f"$K_a={_numero(trecho['coeficiente_empuxo_ativo'], 4)}$.",
+            f"Tensão vertical efetiva $\\sigma'_v$: {_numero(trecho['tensao_vertical_efetiva_superior_kPa'])} "
+            f"kPa no topo e {_numero(trecho['tensao_vertical_efetiva_inferior_kPa'])} kPa na base.",
+            f"Pressão do solo no topo: $p_s=\\max(0,K_a\\sigma'_v-2c\\sqrt{{K_a}})="
+            f"\\max(0,{_numero(ka_trecho, 4)}\\times{_numero(sigma_sup)}-"
+            f"2\\times{_numero(coesao_trecho)}\\times\\sqrt{{{_numero(ka_trecho, 4)}}})="
+            f"{_numero(ps_sup)}$ kPa; na base, substituindo $\\sigma'_v={_numero(sigma_inf)}$ kPa, "
+            f"$p_s={_numero(ps_inf)}$ kPa.",
+            f"Pressão da sobrecarga: $p_q=K_aq={_numero(ka_trecho, 4)}"
+            f"\\times{_numero(entradas_muro['sobrecarga_kPa'])}={_numero(pq)}$ kPa.",
+            f"Pressão da água $u$: {_numero(u_sup)} kPa no topo e {_numero(u_inf)} kPa na base.",
+            f"Pressão lateral total $p=p_s+p_q+u$: {_numero(ps_sup + pq + u_sup)} kPa no topo "
+            f"e {_numero(ps_inf + pq + u_inf)} kPa na base.",
+        ])
 
     linhas.extend(
         [
@@ -129,27 +156,22 @@ def montar_memorial_passo_a_passo_muro(
             r"$E_i=\int p(z)\,dz$ (trapézio ou triângulo, conforme os valores nas extremidades). "
             r"O braço é medido até a ponta da base e $M_i=E_i\,y_i$.",
             "",
-            "| Trecho | $E_s$ (kN/m) | braço $y_s$ (m) | $M_s$ (kN·m/m) | "
-            "$E_q$ (kN/m) | braço $y_q$ (m) | $M_q$ (kN·m/m) | "
-            "$E_w$ (kN/m) | braço $y_w$ (m) | $M_w$ (kN·m/m) |",
-            "|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|",
+            "",
         ]
     )
     for trecho in trechos:
-        linhas.append(
-            "| {nome} | {es} | {ys} | {ms} | {eq} | {yq} | {mq} | {ew} | {yw} | {mw} |".format(
-                nome=trecho["identificacao_trecho"],
-                es=_numero(trecho["empuxo_solo_kN_m"]),
-                ys=_numero(trecho["braco_empuxo_solo_ponta_m"]),
-                ms=_numero(trecho["momento_empuxo_solo_ponta_kNm_m"]),
-                eq=_numero(trecho["empuxo_sobrecarga_kN_m"]),
-                yq=_numero(trecho["braco_empuxo_sobrecarga_ponta_m"]),
-                mq=_numero(trecho["momento_empuxo_sobrecarga_ponta_kNm_m"]),
-                ew=_numero(trecho["empuxo_hidrostatico_kN_m"]),
-                yw=_numero(trecho["braco_empuxo_hidrostatico_ponta_m"]),
-                mw=_numero(trecho["momento_empuxo_hidrostatico_ponta_kNm_m"]),
-            )
-        )
+        linhas.extend([
+            f"#### Integração em {trecho['identificacao_trecho']}",
+            f"Empuxo do solo $E_s=\\int p_s\\,dz={_numero(trecho['empuxo_solo_kN_m'])}$ kN/m; "
+            f"braço $y_s={_numero(trecho['braco_empuxo_solo_ponta_m'])}$ m; "
+            f"momento $M_s=E_sy_s={_numero(trecho['momento_empuxo_solo_ponta_kNm_m'])}$ kN·m/m.",
+            f"Empuxo da sobrecarga $E_q={_numero(trecho['empuxo_sobrecarga_kN_m'])}$ kN/m; "
+            f"braço $y_q={_numero(trecho['braco_empuxo_sobrecarga_ponta_m'])}$ m; "
+            f"momento $M_q={_numero(trecho['momento_empuxo_sobrecarga_ponta_kNm_m'])}$ kN·m/m.",
+            f"Empuxo da água $E_w={_numero(trecho['empuxo_hidrostatico_kN_m'])}$ kN/m; "
+            f"braço $y_w={_numero(trecho['braco_empuxo_hidrostatico_ponta_m'])}$ m; "
+            f"momento $M_w={_numero(trecho['momento_empuxo_hidrostatico_ponta_kNm_m'])}$ kN·m/m.",
+        ])
     linhas.append(
         f"**Somas:** $E_s={_numero(resumo['empuxo_solo_kN_m'])}$ kN/m, "
         f"$E_q={_numero(resumo['empuxo_sobrecarga_kN_m'])}$ kN/m, "
@@ -264,7 +286,7 @@ def montar_memorial_passo_a_passo_muro(
             "Ele não inclui ruptura global, empuxo passivo à frente do muro nem dimensionamento estrutural do concreto.",
         ]
     )
-    return "\n\n".join(linhas)
+    return "\n\n".join(linha for linha in linhas if linha.strip())
 
 
 def montar_memorial_passo_a_passo_talude(
@@ -285,20 +307,41 @@ def montar_memorial_passo_a_passo_talude(
     quantidade_fatias = int(entradas_talude["quantidade_fatias"])
 
     linhas = [
+        "### Dados do caso e convenções",
+        f"$H={_numero(entradas_talude['altura_talude_m'])}$ m; "
+        f"face $H:V={_numero(entradas_talude['relacao_horizontal_vertical_face'])}:1$; "
+        f"$\\beta={_numero(entradas_talude['inclinacao_terreno_montante_graus'])}^\\circ$; "
+        f"$a={_numero(entradas_talude['distancia_crista_entrada_m'])}$ m; "
+        f"$L_b={_numero(entradas_talude['distancia_pe_saida_m'])}$ m; "
+        f"$q={_numero(entradas_talude['sobrecarga_crista_kPa'])}$ kPa; "
+        f"$n={quantidade_fatias}$ fatias.",
+        "As forças estão expressas por metro de largura. Os índices 1 e 2 indicam camada superior e inferior.",
+        f"Camada 1: $\\gamma_{{nat}}={_numero(entradas_talude['peso_especifico_natural_camada_superior_kN_m3'])}$, "
+        f"$\\gamma_{{sat}}={_numero(entradas_talude['peso_especifico_saturado_camada_superior_kN_m3'])}$ kN/m³; "
+        f"$c'_1={_numero(entradas_talude['coesao_efetiva_camada_superior_kPa'])}$ kPa; "
+        f"$\\varphi'_1={_numero(entradas_talude['angulo_atrito_efetivo_camada_superior_graus'])}^\\circ$.",
+        f"Camada 2: $\\gamma_{{nat}}={_numero(entradas_talude['peso_especifico_natural_camada_inferior_kN_m3'])}$, "
+        f"$\\gamma_{{sat}}={_numero(entradas_talude['peso_especifico_saturado_camada_inferior_kN_m3'])}$ kN/m³; "
+        f"$c'_2={_numero(entradas_talude['coesao_efetiva_camada_inferior_kPa'])}$ kPa; "
+        f"$\\varphi'_2={_numero(entradas_talude['angulo_atrito_efetivo_camada_inferior_graus'])}^\\circ$.",
+        f"Espessura da camada superior $h_1={_numero(entradas_talude['espessura_camada_superior_m'])}$ m; "
+        f"peso específico da água $\\gamma_w={_numero(entradas_talude['peso_especifico_agua_kN_m3'])}$ kN/m³.",
+        "",
         "### 1. Geometria e pontos de ruptura",
-        r"A crista fica em $x_c=H(H{:}V)$; o ponto de entrada é "
+        r"O comprimento horizontal da face é $x_c=H(H/V)$; o ponto de entrada é "
         r"$x_E=x_c+a$ e $y_E=H+(x_E-x_c)\tan\beta$. "
         r"A saída fica em $x_S=-L_b$, $y_S=0$.",
-        f"- $x_c={_numero(face_m)}$ m; $E=({_numero(x_entrada_m)}; {_numero(y_entrada_m)})$ m; "
+        f"Substituindo: $x_c={_numero(entradas_talude['altura_talude_m'])}"
+        f"\\times{_numero(entradas_talude['relacao_horizontal_vertical_face'])}={_numero(face_m)}$ m. "
+        f"Pontos: $E=({_numero(x_entrada_m)}; {_numero(y_entrada_m)})$ m; "
         f"$S=({_numero(x_saida_m)}; 0)$ m.",
         r"A distância da corda é $d=\sqrt{(x_E-x_S)^2+(y_E-y_S)^2}="
         f"{_numero(distancia_m)}\\,\\mathrm{{m}}$.",
         "",
         "### 2. Círculos avaliados",
-        "A tabela mostra os raios informados; somente candidatos válidos recebem FS.",
+        "Cada raio informado é testado ligando a saída e a entrada; o centro define um círculo candidato. "
+        "Só superfícies que atendem aos critérios geométricos e de força recebem FS.",
         "",
-        "| Círculo | $R$ (m) | Centro $C=(x_c,y_c)$ (m) | Situação | FS · Fellenius |",
-        "|---|---:|---:|---|---:|",
     ]
     for circulo in circulos:
         centro = (
@@ -306,10 +349,13 @@ def montar_memorial_passo_a_passo_talude(
             if circulo["centro_x_m"] is not None
             else "—"
         )
-        linhas.append(
-            f"| {circulo['identificacao']} | {_numero(circulo['raio_m'])} | {centro} | "
-            f"{circulo['situacao']} | {_numero(circulo['fator_seguranca'], 3)} |"
-        )
+        linhas.extend([
+            f"#### {circulo['identificacao']} — raio {_numero(circulo['raio_m'])} m",
+            f"Centro: $C={centro}$ m. Situação: **{circulo['situacao']}**.",
+            f"Fator de segurança calculado: **{_numero(circulo['fator_seguranca'], 3)}**."
+            if circulo["fator_seguranca"] is not None
+            else "Fator de segurança: não calculado para este candidato.",
+        ])
 
     if circulo_critico:
         linhas.append(
@@ -339,7 +385,7 @@ def montar_memorial_passo_a_passo_talude(
                 "Não há um círculo válido selecionado para detalhar as fatias.",
             ]
         )
-        return "\n\n".join(linhas)
+        return "\n\n".join(linha for linha in linhas if linha.strip())
 
     raio = float(circulo_selecionado["raio_m"])
     centro_x = circulo_selecionado["centro_x_m"]
@@ -353,7 +399,7 @@ def montar_memorial_passo_a_passo_talude(
     )
     if centro_x is None or centro_y is None:
         linhas.append("Como $R<d/2$, não existe geometria circular que ligue a saída à entrada.")
-        return "\n\n".join(linhas)
+        return "\n\n".join(linha for linha in linhas if linha.strip())
 
     meia_corda = distancia_m / 2.0
     altura_centro = max(0.0, raio**2 - meia_corda**2) ** 0.5
@@ -394,7 +440,7 @@ def montar_memorial_passo_a_passo_talude(
             r"$F_{R,i}=c'_1L_{1,i}+c'_2L_{2,i}+N'_i\left["
             r"\frac{L_{1,i}}{\Delta L_i}\tan\varphi'_1+"
             r"\frac{L_{2,i}}{\Delta L_i}\tan\varphi'_2\right]$.",
-            "Abaixo, cada linha substitui os valores calculados para a fatia selecionada.",
+            "A seguir, cada fatia mostra as áreas que formam o peso, as forças na base e as parcelas da resistência.",
             "",
         ]
     )
@@ -434,21 +480,42 @@ def montar_memorial_passo_a_passo_talude(
         mobilizada = fatia["forca_mobilizada_kN_m"]
         linhas.extend(
             [
-                f"**Fatia {indice} — {fatia['situacao']}** · "
-                f"$y_{{base}}={_numero(fatia['cota_base_m'])}$ m · "
-                f"$\\alpha={_numero(alpha)}^\\circ$ · $\\Delta L={_numero(delta_l)}$ m.",
-                f"$W_{{{indice}}}={termos_peso}={_latex_numero(fatia['peso_fatia_kN_m'])}\\,\\mathrm{{kN/m}}$.",
+                f"#### Fatia {indice} — {fatia['situacao']}",
+                f"Faixa horizontal: $x={_numero(fatia['x_inicial_m'])}$ a "
+                f"{_numero(fatia['x_final_m'])}$ m; topo médio = {_numero(fatia['cota_topo_m'])} m; "
+                f"base média = {_numero(fatia['cota_base_m'])} m.",
+                f"Ângulos dos raios nas bordas, calculados por "
+                f"$\\alpha=\\arcsin((x-x_O)/R)$: $\\alpha_e={_numero(fatia['angulo_base_inicial_graus'])}^\\circ$ "
+                f"e $\\alpha_d={_numero(fatia['angulo_base_final_graus'])}^\\circ$; "
+                f"ângulo médio $\\alpha={_numero(alpha)}^\\circ$.",
+                f"Variação angular $\\Delta\\theta={_numero(fatia['variacao_angular_rad'], 4)}$ rad; "
+                f"base em arco $\\Delta L=R\\Delta\\theta={_numero(raio)}"
+                f"\\times{_numero(fatia['variacao_angular_rad'], 4)}={_numero(delta_l)}$ m.",
+                "Áreas aproximadas por trapézios (m²): "
+                f"camada 1 não saturada = {_numero(a1n, 4)}; camada 1 saturada = {_numero(a1s, 4)}; "
+                f"camada 2 não saturada = {_numero(a2n, 4)}; camada 2 saturada = {_numero(a2s, 4)}.",
+                f"Peso do solo e da sobrecarga: $W_i=\\sum_j\\gamma_jA_{{ij}}+Q_i$. "
+                f"Substituição: $W_{{{indice}}}={termos_peso}="
+                f"{_latex_numero(fatia['peso_fatia_kN_m'])}\\,\\mathrm{{kN/m}}$; "
+                f"sobrecarga desta fatia $Q_i={_numero(q_fatia)}$ kN/m.",
             ]
         )
         if n_total is None:
             linhas.append("A base circular não intercepta o terreno nesta fatia; as forças não entram no FS.")
             continue
         linhas.append(
-            f"$N_{{{indice}}}=W\\cos\\alpha={_latex_numero(fatia['peso_fatia_kN_m'])}"
-            f"\\cos({_latex_numero(alpha)}^\\circ)={_latex_numero(n_total)}$ kN/m; "
-            f"$U_{{{indice}}}=u\\Delta L={_latex_numero(u)}\\times{_latex_numero(delta_l)}"
-            f"={_latex_numero(u_total)}$ kN/m; "
-            f"$N'_{{{indice}}}=N-U={_latex_numero(n_efetiva)}$ kN/m."
+            f"Força normal total: $N_i=W_i\\cos\\alpha_i="
+            f"{_latex_numero(fatia['peso_fatia_kN_m'])}\\cos({_latex_numero(alpha)}^\\circ)="
+            f"{_latex_numero(n_total)}$ kN/m.",
+        )
+        linhas.append(
+            f"Pressão neutra média $u_i={_numero(u)}$ kPa; resultante da água: "
+            f"$U_i=u_i\\Delta L_i={_latex_numero(u)}\\times{_latex_numero(delta_l)}="
+            f"{_latex_numero(u_total)}$ kN/m.",
+        )
+        linhas.append(
+            f"Normal efetiva: $N'_i=N_i-U_i={_latex_numero(n_total)}-"
+            f"{_latex_numero(u_total)}={_latex_numero(n_efetiva)}$ kN/m."
         )
         if resistencia is not None:
             l1 = fatia["comprimento_camada_superior_m"]
@@ -456,20 +523,22 @@ def montar_memorial_passo_a_passo_talude(
             fr_coesao = fatia["forca_resistente_coesao_kN_m"]
             fr_atrito = fatia["forca_resistente_atrito_kN_m"]
             linhas.append(
-                f"$F_{{R,{indice}}}=c'_1L_1+c'_2L_2+F_{{\\varphi}}="
-                f"({_latex_numero(c1)}\\times{_latex_numero(l1)}+"
-                f"{_latex_numero(c2)}\\times{_latex_numero(l2)})+"
-                f"{_latex_numero(fr_atrito)}={_latex_numero(resistencia)}$ kN/m "
-                f"(coesão: {_numero(fr_coesao)}; atrito: {_numero(fr_atrito)} kN/m)."
+                f"Resistência por coesão: $F_{{c,{indice}}}=c'_1L_1+c'_2L_2="
+                f"{_latex_numero(c1)}\\times{_latex_numero(l1)}+"
+                f"{_latex_numero(c2)}\\times{_latex_numero(l2)}="
+                f"{_latex_numero(fr_coesao)}$ kN/m."
             )
             linhas.append(
-                f"$F_{{\\varphi,{indice}}}=N'[(L_1/\\Delta L)\\tan\\varphi'_1+"
+                f"Resistência por atrito: $F_{{\\varphi,{indice}}}=N'[(L_1/\\Delta L)\\tan\\varphi'_1+"
                 f"(L_2/\\Delta L)\\tan\\varphi'_2]="
-                f"{_latex_numero(n_efetiva)}[({_latex_numero(l1)}/"
-                f"{_latex_numero(delta_l)})\\tan({_latex_numero(phi1)}^\\circ)+"
-                f"({_latex_numero(l2)}/{_latex_numero(delta_l)})"
-                f"\\tan({_latex_numero(phi2)}^\\circ)]="
-                f"{_latex_numero(fr_atrito)}$ kN/m."
+                f"{_latex_numero(n_efetiva)}[({_latex_numero(l1)}/{_latex_numero(delta_l)})"
+                f"\\tan({_latex_numero(phi1)}^\\circ)+({_latex_numero(l2)}/{_latex_numero(delta_l)})"
+                f"\\tan({_latex_numero(phi2)}^\\circ)]={_latex_numero(fr_atrito)}$ kN/m."
+            )
+            linhas.append(
+                f"Resistência total: $F_{{R,{indice}}}=F_{{c,{indice}}}+F_{{\\varphi,{indice}}}="
+                f"{_latex_numero(fr_coesao)}+{_latex_numero(fr_atrito)}="
+                f"{_latex_numero(resistencia)}$ kN/m."
             )
         else:
             linhas.append(
@@ -516,4 +585,4 @@ def montar_memorial_passo_a_passo_talude(
             "dos raios e não representa uma busca automática irrestrita de todas as superfícies possíveis.",
         ]
     )
-    return "\n\n".join(linhas)
+    return "\n\n".join(linha for linha in linhas if linha.strip())
