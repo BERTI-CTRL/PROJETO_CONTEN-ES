@@ -718,17 +718,19 @@ def _mostrar_grafico_geometria(
                         busca_centros["coordenadas_y_m"][indice_y]
                     )
                     textos_centros_malha.append(
-                        f"FS mínimo = {fator_seguranca:.3f}"
+                        f"{fator_seguranca:.2f}"
                     )
             figura_geometria.add_trace(
                 go.Scatter(
                     x=centros_x_malha,
                     y=centros_y_malha,
-                    mode="markers",
+                    mode="markers+text",
                     marker={"color": "#54799a", "size": 5, "opacity": 0.7},
                     text=textos_centros_malha,
-                    name="Centros avaliados",
-                    hovertemplate="Centro (%{x:.2f}, %{y:.2f}) m<br>%{text}<extra></extra>",
+                    textposition="top center",
+                    textfont={"size": 9, "color": "#c34b3c"},
+                    name="FS mínimo por centro",
+                    hovertemplate="Centro (%{x:.2f}, %{y:.2f}) m<br>FS mínimo = %{text}<extra></extra>",
                 )
             )
 
@@ -782,6 +784,28 @@ def _mostrar_grafico_geometria(
                         "<br>x = %{x:.2f} m; y = %{y:.2f} m<extra></extra>"
                     ),
                 )
+            )
+            x_meio_arco_critico = (
+                circulo_critico_malha["x_saida_m"]
+                + circulo_critico_malha["x_entrada_m"]
+            ) / 2
+            figura_geometria.add_annotation(
+                x=x_meio_arco_critico,
+                y=_cota_arco(circulo_critico_malha, x_meio_arco_critico),
+                text=(
+                    "FS mínimo global = "
+                    f"{circulo_critico_malha['fator_seguranca']:.3f}"
+                ),
+                showarrow=True,
+                arrowcolor="#15803d",
+                arrowwidth=1.5,
+                arrowhead=2,
+                ax=90,
+                ay=-55,
+                font={"color": "#15803d", "size": 12},
+                bgcolor="rgba(255,255,255,0.88)",
+                bordercolor="#15803d",
+                borderwidth=1,
             )
 
     comprimento_horizontal_face_m = resultado_talude["geometria"][
