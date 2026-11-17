@@ -665,6 +665,125 @@ def _mostrar_grafico_geometria(
             )
         )
 
+    busca_centros = resultado_talude.get("busca_centros")
+    circulo_critico_malha = (
+        busca_centros.get("circulo_critico") if busca_centros else None
+    )
+    if busca_centros and circulo_critico_malha:
+        valores_fs_malha = [
+            valor
+            for linha in busca_centros["fatores_seguranca_minimos"]
+            for valor in linha
+            if valor is not None
+        ]
+        if valores_fs_malha:
+            fs_minimo_malha = min(valores_fs_malha)
+            fs_maximo_malha = max(valores_fs_malha)
+            passo_contorno = max(0.05, (fs_maximo_malha - fs_minimo_malha) / 8)
+            fim_contorno = max(fs_maximo_malha, fs_minimo_malha + passo_contorno)
+            figura_geometria.add_trace(
+                go.Contour(
+                    x=busca_centros["coordenadas_x_m"],
+                    y=busca_centros["coordenadas_y_m"],
+                    z=busca_centros["fatores_seguranca_minimos"],
+                    name="Linhas de mesmo FS",
+                    showscale=False,
+                    connectgaps=False,
+                    contours={
+                        "start": fs_minimo_malha,
+                        "end": fim_contorno,
+                        "size": passo_contorno,
+                        "coloring": "none",
+                        "showlabels": True,
+                        "labelfont": {"size": 10, "color": "#334e68"},
+                    },
+                    line={"color": "#54799a", "width": 1.2},
+                    hovertemplate="Centro (x<sub>c</sub>, y<sub>c</sub>) = (%{x:.2f}, %{y:.2f}) m<br>FS mínimo neste centro = %{z:.3f}<extra></extra>",
+                )
+            )
+
+            centros_x_malha: list[float] = []
+            centros_y_malha: list[float] = []
+            textos_centros_malha: list[str] = []
+            for indice_y, linha_fs in enumerate(
+                busca_centros["fatores_seguranca_minimos"]
+            ):
+                for indice_x, fator_seguranca in enumerate(linha_fs):
+                    if fator_seguranca is None:
+                        continue
+                    centros_x_malha.append(
+                        busca_centros["coordenadas_x_m"][indice_x]
+                    )
+                    centros_y_malha.append(
+                        busca_centros["coordenadas_y_m"][indice_y]
+                    )
+                    textos_centros_malha.append(
+                        f"FS mínimo = {fator_seguranca:.3f}"
+                    )
+            figura_geometria.add_trace(
+                go.Scatter(
+                    x=centros_x_malha,
+                    y=centros_y_malha,
+                    mode="markers",
+                    marker={"color": "#54799a", "size": 5, "opacity": 0.7},
+                    text=textos_centros_malha,
+                    name="Centros avaliados",
+                    hovertemplate="Centro (%{x:.2f}, %{y:.2f}) m<br>%{text}<extra></extra>",
+                )
+            )
+
+            figura_geometria.add_trace(
+                go.Scatter(
+                    x=[circulo_critico_malha["centro_x_m"]],
+                    y=[circulo_critico_malha["centro_y_m"]],
+                    mode="markers",
+                    marker={
+                        "color": "#15803d",
+                        "size": 13,
+                        "symbol": "star",
+                        "line": {"color": "white", "width": 1},
+                    },
+                    name="FS mínimo da malha",
+                    hovertemplate=(
+                        "FS mínimo da malha = "
+                        f"{circulo_critico_malha['fator_seguranca']:.3f}"
+                        "<br>R = %{customdata:.2f} m"
+                        "<br>Centro (%{x:.2f}, %{y:.2f}) m<extra></extra>"
+                    ),
+                    customdata=[circulo_critico_malha["raio_m"]],
+                )
+            )
+
+            quantidade_pontos_arco = 121
+            x_arco_malha = [
+                circulo_critico_malha["x_saida_m"]
+                + indice
+                * (
+                    circulo_critico_malha["x_entrada_m"]
+                    - circulo_critico_malha["x_saida_m"]
+                )
+                / (quantidade_pontos_arco - 1)
+                for indice in range(quantidade_pontos_arco)
+            ]
+            figura_geometria.add_trace(
+                go.Scatter(
+                    x=x_arco_malha,
+                    y=[_cota_arco(circulo_critico_malha, x_m) for x_m in x_arco_malha],
+                    mode="lines",
+                    line={"color": "#15803d", "width": 3, "dash": "dash"},
+                    name=(
+                        "Superfície crítica da malha · "
+                        f"FS = {circulo_critico_malha['fator_seguranca']:.3f}"
+                    ),
+                    hovertemplate=(
+                        "Superfície crítica da malha"
+                        f"<br>FS = {circulo_critico_malha['fator_seguranca']:.3f}"
+                        f"<br>R = {circulo_critico_malha['raio_m']:.2f} m"
+                        "<br>x = %{x:.2f} m; y = %{y:.2f} m<extra></extra>"
+                    ),
+                )
+            )
+
     comprimento_horizontal_face_m = resultado_talude["geometria"][
         "comprimento_horizontal_face_m"
     ]
@@ -750,12 +869,14 @@ def _mostrar_grafico_geometria(
     maior_cota_m = max(coordenadas_perfil_y + [0.0])
     if circulo_selecionado and circulo_selecionado["centro_y_m"] is not None:
         maior_cota_m = max(maior_cota_m, circulo_selecionado["centro_y_m"])
+    if busca_centros:
+        maior_cota_m = max(maior_cota_m, max(busca_centros["coordenadas_y_m"]))
     menor_cota_m = min(coordenadas_perfil_y + [0.0])
     if circulo_selecionado and circulo_selecionado["centro_y_m"] is not None:
         menor_cota_m = min(menor_cota_m, *_coordenadas_arco_y(circulo_selecionado))
 
     figura_geometria.update_layout(
-        title="Perfil, camadas, nível d’água e círculo selecionado",
+        title="Perfil, superfícies de ruptura e linhas de mesmo FS",
         height=620,
         margin={"l": 55, "r": 25, "t": 65, "b": 225},
         xaxis_title="Distância horizontal x (m), origem no pé do talude",
@@ -783,6 +904,14 @@ def _mostrar_grafico_geometria(
         theme=None,
         config=_configuracao_download_png("perfil_talude"),
     )
+    if circulo_critico_malha:
+        st.caption(
+            "As linhas de mesmo FS interpolam a busca em malha: em cada centro, "
+            "foi avaliado o menor FS entre os raios candidatos informados. "
+            f"Estrela verde: menor FS encontrado na malha ({circulo_critico_malha['fator_seguranca']:.3f}, "
+            f"R = {circulo_critico_malha['raio_m']:.2f} m). A busca complementa a comparação "
+            "dos círculos candidatos exibida acima."
+        )
 
 
 def _coordenadas_arco_y(circulo: dict[str, Any]) -> list[float]:

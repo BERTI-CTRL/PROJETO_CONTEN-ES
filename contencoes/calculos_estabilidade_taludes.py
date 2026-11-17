@@ -186,7 +186,7 @@ def validar_entradas_talude(entradas_talude: dict[str, Any]) -> list[str]:
 
 
 def calcular_estabilidade_talude(entradas_talude: dict[str, Any]) -> dict[str, Any]:
-    """Avalia os dez círculos candidatos pelo método de Fellenius."""
+    """Avalia círculos candidatos e uma malha de centros pelo método de Fellenius."""
     erros = validar_entradas_talude(entradas_talude)
     if erros:
         raise ValueError(" ".join(erros))
@@ -209,11 +209,13 @@ def calcular_estabilidade_talude(entradas_talude: dict[str, Any]) -> dict[str, A
         if circulos_validos
         else None
     )
+    busca_centros = _buscar_centros_em_malha(entradas_talude, geometria, circulos)
     return {
         "geometria": geometria,
         "perfil_terreno": _criar_perfil_para_grafico(entradas_talude),
         "circulos": circulos,
         "circulo_critico": circulo_critico,
+        "busca_centros": busca_centros,
         "resumo": {
             "quantidade_circulos_validos": len(circulos_validos),
             "fator_seguranca_critico": (
@@ -323,7 +325,36 @@ def _calcular_circulo(
     centro_y_m = cota_entrada_m / 2 + (
         (coordenada_x_entrada_m + distancia_pe_saida_m) / distancia_entrada_saida_m
     ) * altura_centro_m
-    fatias = _criar_fatias(entradas_talude, geometria, centro_x_m, centro_y_m, raio_m)
+    return _avaliar_circulo_com_centro(
+        entradas_talude,
+        geometria,
+        raio_m,
+        identificacao_circulo,
+        centro_x_m,
+        centro_y_m,
+        -distancia_pe_saida_m,
+        coordenada_x_entrada_m,
+    )
+
+
+def _avaliar_circulo_com_centro(
+    entradas_talude: dict[str, Any],
+    geometria: dict[str, Any],
+    raio_m: float,
+    identificacao_circulo: str,
+    centro_x_m: float,
+    centro_y_m: float,
+    x_saida_m: float,
+    x_entrada_m: float,
+) -> dict[str, Any]:
+    entradas_circulo = dict(entradas_talude)
+    entradas_circulo["distancia_pe_saida_m"] = -x_saida_m
+    geometria_circulo = dict(geometria)
+    geometria_circulo["coordenada_x_entrada_m"] = x_entrada_m
+    geometria_circulo["cota_entrada_m"] = _cota_terreno(x_entrada_m, entradas_talude)
+    fatias = _criar_fatias(
+        entradas_circulo, geometria_circulo, centro_x_m, centro_y_m, raio_m
+    )
 
     situacoes_fatias = {fatia["situacao"] for fatia in fatias}
     soma_forcas_resistentes_diagnostica_kN_m = sum(
@@ -359,8 +390,8 @@ def _calcular_circulo(
     return {
         "identificacao": identificacao_circulo,
         "raio_m": raio_m,
-        "x_saida_m": -distancia_pe_saida_m,
-        "x_entrada_m": coordenada_x_entrada_m,
+        "x_saida_m": x_saida_m,
+        "x_entrada_m": x_entrada_m,
         "centro_x_m": centro_x_m,
         "centro_y_m": centro_y_m,
         "fator_seguranca": fator_seguranca,
@@ -379,6 +410,203 @@ def _calcular_circulo(
         "situacao": situacao,
         "fatias": fatias,
     }
+
+
+def _buscar_centros_em_malha(
+    entradas_talude: dict[str, Any],
+    geometria: dict[str, Any],
+    circulos_base: list[dict[str, Any]],
+    quantidade_pontos: int = 11,
+) -> dict[str, Any] | None:
+    """Avalia o menor FS em cada ponto de uma malha de centros circular."""
+    centros_existentes = [
+        circulo
+        for circulo in circulos_base
+        if circulo["centro_x_m"] is not None and circulo["centro_y_m"] is not None
+    ]
+    if not centros_existentes:
+        return None
+
+    altura = float(entradas_talude["altura_talude_m"])
+    valores_x = [float(circulo["centro_x_m"]) for circulo in centros_existentes]
+    valores_y = [float(circulo["centro_y_m"]) for circulo in centros_existentes]
+    amplitude_x = max(max(valores_x) - min(valores_x), altura * 0.6)
+    amplitude_y = max(max(valores_y) - min(valores_y), altura * 0.6)
+    margem_x = amplitude_x * 0.18
+    margem_y = amplitude_y * 0.18
+    coordenadas_x = [
+        min(valores_x) - margem_x
+        + indice * (amplitude_x + 2 * margem_x) / (quantidade_pontos - 1)
+        for indice in range(quantidade_pontos)
+    ]
+    coordenadas_y = [
+        min(valores_y) - margem_y
+        + indice * (amplitude_y + 2 * margem_y) / (quantidade_pontos - 1)
+        for indice in range(quantidade_pontos)
+    ]
+
+    matriz_fs: list[list[float | None]] = []
+    matriz_circulos: list[list[dict[str, Any] | None]] = []
+    circulo_critico_malha = None
+    raios_candidatos = [float(raio) for raio in entradas_talude["raios_candidatos_m"]]
+    largura_horizontal_face = geometria["comprimento_horizontal_face_m"]
+
+    for indice_y, centro_y in enumerate(coordenadas_y):
+        linha_fs: list[float | None] = []
+        linha_circulos: list[dict[str, Any] | None] = []
+        for indice_x, centro_x in enumerate(coordenadas_x):
+            if centro_y <= _cota_terreno(centro_x, entradas_talude):
+                linha_fs.append(None)
+                linha_circulos.append(None)
+                continue
+
+            circulo_minimo_ponto = None
+            for indice_raio, raio_m in enumerate(raios_candidatos, start=1):
+                intersecoes = _intersecoes_circulo_terreno(
+                    entradas_talude,
+                    centro_x,
+                    centro_y,
+                    raio_m,
+                    largura_horizontal_face_m,
+                )
+                if intersecoes is None:
+                    continue
+                x_saida_m, x_entrada_m = intersecoes
+                if not _arco_abaixo_do_terreno(
+                    entradas_talude,
+                    centro_x,
+                    centro_y,
+                    raio_m,
+                    x_saida_m,
+                    x_entrada_m,
+                ):
+                    continue
+
+                circulo_avaliado = _avaliar_circulo_com_centro(
+                    entradas_talude,
+                    geometria,
+                    raio_m,
+                    f"M{indice_y + 1:02d}-{indice_x + 1:02d}-R{indice_raio:02d}",
+                    centro_x,
+                    centro_y,
+                    x_saida_m,
+                    x_entrada_m,
+                )
+                if (
+                    circulo_avaliado["situacao"] == "VÁLIDO"
+                    and (
+                        circulo_minimo_ponto is None
+                        or circulo_avaliado["fator_seguranca"]
+                        < circulo_minimo_ponto["fator_seguranca"]
+                    )
+                ):
+                    circulo_minimo_ponto = circulo_avaliado
+
+            if circulo_minimo_ponto is None:
+                linha_fs.append(None)
+                linha_circulos.append(None)
+                continue
+            linha_fs.append(float(circulo_minimo_ponto["fator_seguranca"]))
+            linha_circulos.append(circulo_minimo_ponto)
+            if (
+                circulo_critico_malha is None
+                or circulo_minimo_ponto["fator_seguranca"]
+                < circulo_critico_malha["fator_seguranca"]
+            ):
+                circulo_critico_malha = circulo_minimo_ponto
+
+        matriz_fs.append(linha_fs)
+        matriz_circulos.append(linha_circulos)
+
+    return {
+        "coordenadas_x_m": coordenadas_x,
+        "coordenadas_y_m": coordenadas_y,
+        "fatores_seguranca_minimos": matriz_fs,
+        "circulos_minimos": matriz_circulos,
+        "circulo_critico": circulo_critico_malha,
+        "quantidade_pontos_por_eixo": quantidade_pontos,
+    }
+
+
+def _intersecoes_circulo_terreno(
+    entradas_talude: dict[str, Any],
+    centro_x_m: float,
+    centro_y_m: float,
+    raio_m: float,
+    largura_horizontal_face_m: float,
+) -> tuple[float, float] | None:
+    altura = float(entradas_talude["altura_talude_m"])
+    x_inicio = min(-2 * altura, centro_x_m - raio_m - 1.0)
+    x_fim = max(
+        largura_horizontal_face_m + 2 * altura,
+        centro_x_m + raio_m + 1.0,
+    )
+    y_fim = _cota_terreno(x_fim, entradas_talude)
+    segmentos = [
+        (x_inicio, 0.0, 0.0, 0.0),
+        (0.0, 0.0, largura_horizontal_face_m, altura),
+        (largura_horizontal_face_m, altura, x_fim, y_fim),
+    ]
+    intersecoes: list[float] = []
+
+    for x0, y0, x1, y1 in segmentos:
+        if x1 <= x0:
+            continue
+        inclinacao = (y1 - y0) / (x1 - x0)
+        intercepto = y0 - inclinacao * x0
+        coef_a = 1 + inclinacao**2
+        coef_b = -2 * centro_x_m - 2 * inclinacao * (centro_y_m - intercepto)
+        coef_c = (
+            centro_x_m**2
+            + (centro_y_m - intercepto) ** 2
+            - raio_m**2
+        )
+        discriminante = coef_b**2 - 4 * coef_a * coef_c
+        if discriminante < -1e-8:
+            continue
+        raiz = math.sqrt(max(0.0, discriminante))
+        for x_intersecao in (
+            (-coef_b - raiz) / (2 * coef_a),
+            (-coef_b + raiz) / (2 * coef_a),
+        ):
+            cota_linha = inclinacao * x_intersecao + intercepto
+            if (
+                x0 - 1e-8 <= x_intersecao <= x1 + 1e-8
+                and centro_y_m - cota_linha >= -1e-8
+            ):
+                intersecoes.append(x_intersecao)
+
+    intersecoes.sort()
+    unicas: list[float] = []
+    for x_intersecao in intersecoes:
+        if not unicas or abs(x_intersecao - unicas[-1]) > 1e-6:
+            unicas.append(x_intersecao)
+
+    saidas = [x for x in unicas if x <= 1e-8]
+    entradas = [x for x in unicas if x >= largura_horizontal_face_m - 1e-8]
+    if not saidas or not entradas:
+        return None
+    x_saida_m = max(saidas)
+    x_entrada_m = min(entradas)
+    return (x_saida_m, x_entrada_m) if x_entrada_m - x_saida_m > 1e-6 else None
+
+
+def _arco_abaixo_do_terreno(
+    entradas_talude: dict[str, Any],
+    centro_x_m: float,
+    centro_y_m: float,
+    raio_m: float,
+    x_saida_m: float,
+    x_entrada_m: float,
+) -> bool:
+    for indice in range(1, 10):
+        x_m = x_saida_m + (x_entrada_m - x_saida_m) * indice / 10
+        cota_arco = centro_y_m - math.sqrt(
+            max(0.0, raio_m**2 - (x_m - centro_x_m) ** 2)
+        )
+        if cota_arco >= _cota_terreno(x_m, entradas_talude) - 1e-6:
+            return False
+    return True
 
 
 def _criar_fatias(
