@@ -38,29 +38,29 @@ aba_formulario, aba_sapata, aba_regressao, aba_mohr, aba_multiplos, aba_adensame
 
 with aba_formulario:
     st.subheader("Formulário de equações")
-    st.caption("Use como mapa antes de preencher as calculadoras. As letras e unidades abaixo seguem os campos das abas; log é decimal (base 10), exceto quando a fórmula mostra ln.")
+    st.caption("Use como mapa antes de preencher as calculadoras. As letras e unidades abaixo seguem os campos das abas; `log₁₀` é decimal e `ln` é logaritmo natural. `Σ` indica soma, `π≈3,1416` e `arctan` é a tangente inversa.")
     with st.expander("Mecânica dos solos — índices, densidades e conversões", expanded=True):
-        st.markdown("**1. Diagrama de fases.** `Vₛ` é o volume dos sólidos, `Vᵥ` o volume de vazios, `Vw` o volume de água e `Va` o volume de ar. `Ms` e `Mw` são as massas seca dos sólidos e da água; `Ws` e `Ww` são seus pesos. Despreza-se o peso do ar.")
+        st.markdown("**1. Diagrama de fases.** `V` é o volume total; `Vₛ`, o volume dos sólidos; `Vᵥ`, o volume de vazios; `Vw`, o volume de água; e `Va`, o volume de ar. `M` é a massa total; `Ms`, a massa seca dos sólidos; `Mw`, a massa de água. `W`, `Ws` e `Ww` são os pesos correspondentes. O peso do ar é desprezado. Os índices `s`, `v`, `w` e `a` indicam sólidos, vazios, água e ar.")
         st.latex(r"V=V_s+V_v,\quad V_v=V_w+V_a,\quad W=W_s+W_w")
 
-        st.markdown("**2. Índices de volume e água.** Use `w` e `Sr` como frações nas equações: 20% = 0,20. `Gs` é adimensional e compara os grãos com a água.")
+        st.markdown("**2. Índices de volume e água.** `e` é o índice de vazios; `n`, a porosidade; `Sr`, o grau de saturação; e `w`, o teor de umidade. `Gs` é a gravidade específica dos grãos (também chamada massa específica relativa): `ρs/ρw` compara a massa específica dos grãos com a da água. Por exemplo, `Gs=2,70` significa que os grãos têm massa específica 2,70 vezes a da água; `Gs` não tem unidade. `ρs` e `ρw` são as massas específicas dos grãos e da água; `γs` e `γw`, seus pesos específicos. Use `w` e `Sr` como frações: 20% = 0,20.")
         st.latex(r"e=\frac{V_v}{V_s},\quad n=\frac{V_v}{V}=\frac{e}{1+e},\quad e=\frac{n}{1-n}")
         st.latex(r"S_r=\frac{V_w}{V_v},\quad w=\frac{M_w}{M_s}=\frac{W_w}{W_s},\quad G_s=\frac{\rho_s}{\rho_w}=\frac{\gamma_s}{\gamma_w}")
         st.latex(r"w=\frac{S_r e}{G_s},\quad S_r=\frac{wG_s}{e},\quad \frac{V_a}{V_v}=1-S_r,\quad \frac{V_a}{V}=n(1-S_r)")
 
-        st.markdown("**3. Densidade e peso específico.** `ρ` é massa por volume (kg/m³ ou g/cm³); `γ` é peso por volume (kN/m³). `g ≈ 9,81 m/s²`. Os índices `d`, `sat` e `'` indicam seco, saturado e submerso.")
+        st.markdown("**3. Densidade e peso específico.** `ρ=M/V` é a densidade natural (massa por volume; kg/m³ ou g/cm³); `γ=W/V` é o peso específico natural (peso por volume; kN/m³). `g≈9,81 m/s²` é a aceleração da gravidade. `ρd` e `γd` são densidade e peso específico secos; `ρsat` e `γsat`, saturados; `ρ′` e `γ′`, submersos. `ρw` e `γw` são os valores da água; adote `γw=9,81 kN/m³` ou o arredondamento da aula.")
         st.latex(r"\rho=\frac{M}{V},\quad \gamma=\frac{W}{V}=\rho g,\quad \rho_d=\frac{M_s}{V}=\frac{\rho}{1+w},\quad \gamma_d=\frac{W_s}{V}=\frac{\gamma}{1+w}")
         st.latex(r"\gamma_d=\gamma_w\frac{G_s}{1+e},\quad \gamma=\gamma_d(1+w)=\gamma_w\frac{G_s+S_r e}{1+e}")
         st.latex(r"\gamma_{sat}=\gamma_w\frac{G_s+e}{1+e},\quad \gamma'=\gamma_{sat}-\gamma_w=\gamma_w\frac{G_s-1}{1+e}")
         st.latex(r"\rho_d=\rho_w\frac{G_s}{1+e},\quad \rho_{sat}=\rho_w\frac{G_s+e}{1+e},\quad \rho'=\rho_{sat}-\rho_w")
 
-        st.markdown("**4. Isolando incógnitas comuns.** Se o exercício der peso específico natural `γ`, teor de umidade `w` e `Gs`, primeiro ache `γd`; depois encontre `e`, `n` e `Sr`.")
+        st.markdown("**4. Isolando incógnitas comuns.** Se o exercício der peso específico natural `γ`, teor de umidade `w` e gravidade específica dos grãos `Gs`, primeiro ache `γd`; depois encontre `e`, `n` e `Sr` pelas relações abaixo.")
         st.latex(r"\gamma_d=\frac{\gamma}{1+w},\quad e=\frac{G_s\gamma_w}{\gamma_d}-1,\quad n=\frac{e}{1+e},\quad S_r=\frac{wG_s}{e}")
         st.markdown("**Conversões rápidas.** Passe porcentagens para fração dividindo por 100. Para converter densidade em peso específico: `γ (kN/m³) = ρ (kg/m³) × 9,81 / 1000`; se `ρ` estiver em g/cm³, basta multiplicar por `9,81`. Use `γw = 9,81 kN/m³` (ou o valor arredondado adotado na aula). `1 MPa = 1000 kPa` e `1 kgf/cm² ≈ 98,07 kPa`.")
         st.markdown("**Exemplo de sequência.** Com `γ = 18 kN/m³`, `w = 20% = 0,20`, `Gs = 2,70` e `γw = 9,81 kN/m³`: `γd = 18/(1+0,20) = 15 kN/m³`; `e = 2,70×9,81/15 − 1 ≈ 0,766`; `n ≈ 0,434`; `Sr = 0,20×2,70/0,766 ≈ 0,705 = 70,5%`.")
         st.caption("A nomenclatura pode variar entre materiais: densidade natural/aparente costuma ser ρ=M/V; peso específico natural/aparente é γ=W/V. Não misture ρ (massa/volume) com γ (peso/volume), nem use porcentagem diretamente dentro das equações.")
     with st.expander("Recalque imediato — Steinbrenner"):
-        st.markdown("**Ideia.** Primeiro a geometria da sapata e da camada fornece fatores sem unidade (`m′`, `n′`, `A₀`, `A₁`, `A₂`, `F₁`, `F₂` e `Iₛ`). Depois `Δσ`, `B`, `Eₛ`, `ν` e `I_f` transformam esses fatores em recalque. `B` é o lado menor, `L` o lado maior, `H` a espessura compressível abaixo da base, `Eₛ` o módulo médio do solo, `ν` o coeficiente de Poisson e `I_f` o fator de embutimento lido na aula.")
+        st.markdown("**Ideia e símbolos.** `B` é o lado menor da sapata; `L`, o maior; `H`, a espessura compressível abaixo da base; `Δσ`, o acréscimo de tensão; `Eₛ`, o módulo de elasticidade médio do solo; `ν`, o coeficiente de Poisson; e `I_f`, o fator de embutimento lido na tabela da aula. `m′=L/B` é a razão entre os lados e `n′=2H/B` relaciona a espessura à meia largura. `A₀`, `A₁` e `A₂` são termos auxiliares geométricos; `F₁` e `F₂` são fatores parciais; juntos formam `Iₛ`, o fator de influência de Steinbrenner. Todos esses fatores são adimensionais. `B′=B/2` é a meia largura. No centro, `α=4` conta os quatro quadrantes iguais considerados. `Sₑ` é o recalque elástico/imediato calculado.")
         st.latex(r"m'=\frac{L}{B},\quad n'=\frac{H}{B/2}=\frac{2H}{B},\quad B'=\frac{B}{2},\quad \alpha=4")
         st.latex(r"A_0=m'\ln\!\left[\frac{(1+\sqrt{m'^2+1})\sqrt{m'^2+n'^2}}{m'(1+\sqrt{m'^2+n'^2+1})}\right]")
         st.latex(r"A_1=\ln\!\left[\frac{(m'+\sqrt{m'^2+1})\sqrt{1+n'^2}}{m'+\sqrt{m'^2+n'^2+1}}\right],\quad A_2=\frac{m'}{n'\sqrt{m'^2+n'^2+1}}")
@@ -68,49 +68,49 @@ with aba_formulario:
         st.latex(r"S_e=\Delta\sigma\,(\alpha B')\frac{1-\nu^2}{E_s}I_sI_f=\Delta\sigma\,(2B)\frac{1-\nu^2}{E_s}I_sI_f")
         st.latex(r"S_{e,\mathrm{rígido}}\approx0.93\,S_{e,\mathrm{flexível}}\quad(\text{sapata quadrada})")
     with st.expander("Recalque primário por adensamento"):
-        st.markdown("**Como escolher o trecho.** Calcule a tensão final `σ′vf = σ′v0 + Δσ′v`. Compare-a com a tensão de pré-adensamento `σ′vm`, que marca a maior tensão efetiva passada. Abaixo dela usa-se `Cr` (recompressão); acima dela usa-se `Cc` (compressão virgem). `H` é a espessura da camada e `e₀` o índice de vazios inicial.")
+        st.markdown("**Símbolos e escolha do trecho.** `σ′v0` é a tensão vertical efetiva inicial no centro da camada; `Δσ′v`, o acréscimo efetivo; `σ′vf=σ′v0+Δσ′v`, a tensão final; e `σ′vm`, a tensão de pré-adensamento (maior tensão efetiva já suportada). `Cr` é o índice de recompressão e `Cc`, o índice de compressão virgem, ambos obtidos da curva `e × log₁₀σ′`. `e₀` é o índice de vazios inicial; `H`, a espessura compressível; `Δe_r` e `Δe_v`, as variações de índice de vazios nos trechos `Cr` e `Cc`; e `Δe` sua soma. `S_c=ΔH` é o recalque primário. Abaixo de `σ′vm` usa-se `Cr`; acima dela, `Cc`.")
         st.latex(r"\sigma'_{vf}=\sigma'_{v0}+\Delta\sigma'_v,\qquad S_c=\Delta H=\frac{H}{1+e_0}\Delta e")
         st.latex(r"\sigma'_{vf}\leq\sigma'_{vm}:\quad\Delta e=C_r\log_{10}\!\left(\frac{\sigma'_{vf}}{\sigma'_{v0}}\right)")
         st.latex(r"\sigma'_{v0}<\sigma'_{vm}<\sigma'_{vf}:\quad\Delta e=C_r\log_{10}\!\left(\frac{\sigma'_{vm}}{\sigma'_{v0}}\right)+C_c\log_{10}\!\left(\frac{\sigma'_{vf}}{\sigma'_{vm}}\right)")
         st.latex(r"\sigma'_{v0}\geq\sigma'_{vm}:\quad\Delta e=C_c\log_{10}\!\left(\frac{\sigma'_{vf}}{\sigma'_{v0}}\right)")
     with st.expander("Recalque secundário"):
-        st.markdown("**Quando usar.** É a deformação lenta depois de terminar o adensamento primário. `Cα` vem do trecho secundário do ensaio, `eₚ` é o índice de vazios no fim do primário, `t₁` é esse instante e `t₂` o instante final. `t₁` e `t₂` precisam estar na mesma unidade.")
+        st.markdown("**Símbolos e uso.** O recalque secundário `S_s` é a deformação lenta após o primário. `Cα` é a inclinação do trecho secundário no gráfico índice de vazios–logaritmo do tempo; `eₚ` é o índice de vazios ao fim do primário; `C′α=Cα/(1+eₚ)` é o índice secundário modificado. `H` é a espessura da camada, `t₁` o tempo ao fim do primário e `t₂` o tempo final analisado. Use a mesma unidade para os dois tempos e `t₂>t₁`.")
         st.latex(r"C'_\alpha=\frac{C_\alpha}{1+e_p},\qquad S_s=C'_\alpha H\log_{10}\!\left(\frac{t_2}{t_1}\right)")
     with st.expander("Tempo para o adensamento primário"):
-        st.markdown("`Tᵥ` relaciona o grau médio de adensamento `U` ao tempo. Depois, `H_d` é a maior distância que a água percorre até uma face drenante: `H/2` para dupla drenagem e `H` para drenagem simples. `Cᵥ` deve estar em unidade compatível com o tempo desejado.")
+        st.markdown("**Símbolos.** `U` é o grau médio de adensamento (fração ou porcentagem); `Tᵥ` é o fator tempo adimensional correspondente a `U`; `Cᵥ` é o coeficiente de adensamento do solo; `H_d` é o maior caminho de drenagem — `H/2` na dupla drenagem ou `H` na drenagem simples; `t` é o tempo decorrido. Use unidades compatíveis: com `Cᵥ` em m²/s e `H_d` em metros, `t` sai em segundos.")
         st.latex(r"T_v=\frac{C_vt}{H_d^2},\qquad t=\frac{T_vH_d^2}{C_v}")
         st.caption("Hd é o maior caminho de drenagem: H/2 para drenagem pelas duas faces e H para uma face. Com Cv em m²/s e Hd em metros, t sai em segundos.")
     with st.expander("Tensões verticais por camadas"):
-        st.markdown("`hᵢ` é a espessura de cada trecho; use `γnatural` acima do nível d'água e `γsat` abaixo dele. `z` é a profundidade medida para baixo a partir da superfície e `zNA` é a profundidade do nível d'água. O programa soma o peso de cada trecho até z, calcula a pressão neutra hidrostática e subtrai para obter a tensão efetiva.")
+        st.markdown("**Símbolos.** `i` identifica cada camada; `hᵢ` é a espessura do trecho considerado; `γᵢ` é seu peso específico (natural acima do nível d'água e saturado abaixo); `z` é a profundidade a partir da superfície; `zNA` é a profundidade do nível d'água; e `γw` é o peso específico da água. `σv(z)` é a tensão vertical total, `u(z)` a pressão neutra da água e `σ′v(z)` a tensão vertical efetiva, calculada por `σv−u`.")
         st.latex(r"\sigma_v(z)=\sum_i \gamma_i h_i,\quad u(z)=\gamma_w\max(z-z_{NA},0),\quad \sigma'_v(z)=\sigma_v(z)-u(z)")
         st.caption("Use γ em kN/m³ e profundidades em m; as tensões saem em kPa. Na tabela, cada camada pode ter pesos específicos diferentes.")
     with st.expander("Interpretação do ensaio de adensamento"):
-        st.markdown("`Cc` é a inclinação da reta virgem e `Cr` a inclinação do ramo de recompressão/descarregamento no gráfico `e × log₁₀σ′`. Os dois pontos usados em cada inclinação devem pertencer ao mesmo trecho aproximadamente reto. Para `Cv`, `t50` vem do método de Casagrande (`log t`) e `t90` do método de Taylor (`√t`). `Hd` é o caminho máximo de drenagem.")
+        st.markdown("**Símbolos.** `Cc` é o índice de compressão da reta virgem e `Cr` o índice de recompressão/descarregamento no gráfico `e × log₁₀σ′`; `e₁` e `e₂` são os índices de vazios dos dois pontos, e `σ′₁` e `σ′₂` suas tensões efetivas. Os dois pontos de cada índice devem pertencer ao mesmo trecho aproximadamente reto. `Cv` é o coeficiente de adensamento; `t50` é o tempo para 50% de adensamento pelo método de Casagrande (`log t`), e `t90`, para 90% pelo método de Taylor (`√t`). `Tv,50` e `Tv,90` são os fatores tempo correspondentes; `Hd` é o caminho máximo de drenagem; `t` é o tempo medido. `U` é o grau médio de adensamento e `Sc,∞` o recalque primário final; `Sc(t)` é o recalque já ocorrido no instante `t`.")
         st.latex(r"C_c\ \text{ou}\ C_r=\frac{e_1-e_2}{\log_{10}(\sigma'_2/\sigma'_1)},\quad C_v=\frac{T_v H_d^2}{t},\quad T_{v,50}=0.197,\quad T_{v,90}=0.848")
         st.latex(r"S_c(t)=\frac{U}{100}S_{c,\infty}")
         st.caption("Digite σ′ em kPa, t50/t90 em minutos e Hd em metros; o programa converte minutos para segundos e mostra Cv em m²/s e cm²/s. Use U em porcentagem para o recalque parcial.")
     with st.expander("Redução de ensaio triaxial e compressão simples"):
-        st.markdown("`D` é o diâmetro inicial, `H₀` a altura inicial, `Δh` o encurtamento e `P` a carga axial na ruptura. `εa=Δh/H₀`. `εv` é a deformação volumétrica de compressão (positiva para contração); em CU, UU e compressão simples considera-se volume constante, então `εv=0`. Em CD, use a variação volumétrica medida. Se houver poropressão medida na ruptura, as tensões efetivas são as totais menos `u`.")
+        st.markdown("**Símbolos e ensaios.** `D` é o diâmetro inicial, `H₀` a altura, `Δh` o encurtamento e `P` a carga axial na ruptura; `εa=Δh/H₀` é a deformação axial. `A₀` é a área inicial e `Ac` a área corrigida; `εv` é a deformação volumétrica (positiva para contração). `σd` é a tensão desviadora; `σ₃` é a tensão confinante/principal menor total e `σ₁` a principal maior total. `u` é a poropressão medida na ruptura; o apóstrofo indica tensão efetiva (`σ′=σ−u`). `Su=σd/2` é a resistência não drenada quando `φu=0`; `qu` é a resistência à compressão simples, caso particular com `σ₃=0`. CU significa adensado não drenado, UU não adensado não drenado e CD adensado drenado; em CU/UU e RCS considera-se volume constante (`εv=0`), enquanto em CD se informa a variação volumétrica medida.")
         st.latex(r"A_0=\frac{\pi D^2}{4},\quad A_c=A_0\frac{1-\varepsilon_v}{1-\varepsilon_a},\quad \sigma_d=\frac{P}{A_c},\quad \sigma_1=\sigma_3+\sigma_d")
         st.latex(r"\sigma'_1=\sigma_1-u,\quad \sigma'_3=\sigma_3-u,\quad S_u=\frac{\sigma_d}{2}\ (\phi_u=0)")
         st.caption("Use D, H₀ e Δh em m, P em kN e σ₃/u em kPa; como 1 kN/m² = 1 kPa, as tensões calculadas saem em kPa.")
     with st.expander("Mínimos quadrados — envoltória de Mohr-Coulomb"):
-        st.markdown("Nesta página, `xᵢ=σₙ` é a tensão normal do ensaio e `yᵢ=τ` é a tensão cisalhante medida. `x̄` e `ȳ` são as médias; `SXX` mede a dispersão de x; `SXY` mede como x e y variam juntos. `a` é a inclinação e `b` o intercepto da reta. O chapéu em `ŷᵢ` significa **valor estimado pela reta** para o mesmo `xᵢ`; `eᵢ=yᵢ−ŷᵢ` é o resíduo (erro vertical entre medida e estimativa).")
+        st.markdown("Nesta regressão, `xᵢ=σₙ` é a tensão normal do ensaio e `yᵢ=τᵢ` a tensão cisalhante medida; `n` é o número de ensaios (aqui não é a porosidade da seção de fases). `x̄` e `ȳ` são as médias. `SXX=Σ(xᵢ−x̄)²` mede a dispersão de x, `SYY=Σ(yᵢ−ȳ)²` a dispersão de y e `SXY=Σ(xᵢ−x̄)(yᵢ−ȳ)` como x e y variam juntos; `Σ` soma os termos de todos os ensaios. `a` é o coeficiente angular e `b` o intercepto da reta. O chapéu em `ŷᵢ` significa **valor estimado pela reta** para aquele `xᵢ`; `eᵢ=yᵢ−ŷᵢ` é o resíduo entre medição e estimativa. `SQT` é a variação total, `SQR` a explicada pela reta e `SQE` a soma dos resíduos ao quadrado. `R` é a correlação linear com sinal; `R²`, o coeficiente de determinação. Para Mohr–Coulomb, `φ` é o ângulo de atrito interno e `c` a coesão.")
         st.latex(r"\bar{x}=\frac{\sum x_i}{n},\quad\bar{y}=\frac{\sum y_i}{n},\quad S_{XX}=\sum(x_i-\bar{x})^2,\quad S_{XY}=\sum(x_i-\bar{x})(y_i-\bar{y})")
         st.latex(r"a=\frac{S_{XY}}{S_{XX}},\quad b=\bar{y}-a\bar{x},\quad \hat{y}_i=ax_i+b,\quad e_i=y_i-\hat{y}_i")
         st.markdown("**Siglas usadas como no material da aula:** `SQT` é a variação total; `SQR` é a parte explicada pela reta; `SQE` é a parte que sobra nos resíduos. Assim, `SQT=SQR+SQE`. `R` é a correlação linear (com sinal) e `R²` é a fração da variação de y explicada pelo ajuste.")
-        st.latex(r"SQT=\sum(y_i-\bar{y})^2,\quad SQR=\sum(\hat{y}_i-\bar{y})^2,\quad SQE=\sum(y_i-\hat{y}_i)^2")
+        st.latex(r"SYY=\sum(y_i-\bar{y})^2,\quad SQT=SYY,\quad SQR=\sum(\hat{y}_i-\bar{y})^2,\quad SQE=\sum(y_i-\hat{y}_i)^2")
         st.latex(r"SQT=SQR+SQE,\quad R=\frac{S_{XY}}{\sqrt{S_{XX}S_{YY}}},\quad R^2=\frac{SQR}{SQT}=1-\frac{SQE}{SQT}")
         st.latex(r"\tau=c+\sigma\tan\phi=a\sigma+b,\qquad a=\tan\phi,\quad b=c")
         st.caption("Para Mohr-Coulomb, use σ em x e τ em y: o coeficiente angular é tan(φ) e o intercepto no eixo τ é a coesão c. R² perto de 1 indica que a reta acompanha bem os pontos; não substitui a interpretação do ensaio.")
     with st.expander("Círculo de Mohr e método do polo"):
-        st.markdown("`C` é a tensão normal no centro do círculo; `R` é o raio e também a tensão cisalhante máxima. `σ₁` e `σ₃` são as tensões principais. Com o sinal de τ adotado na aba Polo, `Mₕ` e `Mᵥ` são os pontos das faces horizontal e vertical; o polo é a interseção das linhas paralelas às faces conhecidas.")
+        st.markdown("**Símbolos e convenção.** `σ` é a tensão normal no eixo horizontal e `τ` a tensão cisalhante no eixo vertical; adote `τ` positivo para cima. `σv` é a tensão normal na face horizontal, `σh` na face vertical e `τh` o cisalhamento na face horizontal. `C` é a tensão normal no centro do círculo; `R` é o raio (também a tensão cisalhante máxima); `σ₁` e `σ₃` são as tensões principais maior e menor. `Mh` e `Mv` são os pontos que representam as faces horizontal e vertical. `P` é o polo, obtido pela interseção das linhas paralelas às faces conhecidas. `α` é o ângulo da reta pelo polo medido desde a horizontal, no sentido anti-horário; `Q` é o ponto onde essa reta encontra o círculo e fornece as tensões no plano escolhido. Na equação `τ=aσ+b`, `a=tan(α)` é a inclinação e `b` o intercepto. `uα=(cosα,sinα)` é o vetor unitário na direção da reta escolhida; `cos` e `sin` são cosseno e seno, e `·` indica produto escalar entre vetores.")
         st.latex(r"C=\frac{\sigma_v+\sigma_h}{2},\quad R=\sqrt{\left(\frac{\sigma_v-\sigma_h}{2}\right)^2+\tau_h^2},\quad \sigma_1=C+R,\quad \sigma_3=C-R")
         st.latex(r"M_h=(\sigma_v,\tau_h),\quad M_v=(\sigma_h,-\tau_h),\quad P=(\sigma_h,\tau_h),\quad (\sigma-C)^2+\tau^2=R^2")
         st.latex(r"\tau=a\sigma+b,\quad a=\tan\alpha,\quad b=\tau_P-a\sigma_P")
         st.latex(r"Q=P-2[(P-(C,0))\cdot(\cos\alpha,\sin\alpha)](\cos\alpha,\sin\alpha)")
     with st.expander("Círculos múltiplos e trajetória P-Q"):
-        st.markdown("Cada círculo representa um estado do ensaio. Seu centro e raio dão `σ₁` e `σ₃`; no gráfico `p-q`, o topo do círculo vira o ponto `(p,q)`. A reta P-Q liga o primeiro ao último ponto ativo na ordem informada.")
+        st.markdown("Cada círculo `i` representa um estágio do ensaio: `Cᵢ` é seu centro, `Rᵢ` o raio, `σ₁ᵢ=Cᵢ+Rᵢ` a tensão principal maior e `σ₃ᵢ=Cᵢ−Rᵢ` a menor. Na envoltória, `τf` é a tensão cisalhante de ruptura, `c` a coesão e `φ` o ângulo de atrito. No gráfico `p-q`, `pᵢ=Cᵢ` é a tensão normal média e `qᵢ=Rᵢ` a tensão desviadora; o topo de cada círculo vira o ponto `(pᵢ,qᵢ)`. A reta P-Q liga o primeiro e o último ponto ativo. `m` é seu coeficiente angular, `β=arctan(m)` o ângulo da reta, e `d` o intercepto em `q=mp+d`. P e Q aqui são nomes dos extremos da trajetória, não as cargas usadas na aba triaxial.")
         st.latex(r"C_i=\frac{\sigma_{1i}+\sigma_{3i}}{2},\quad R_i=\frac{\sigma_{1i}-\sigma_{3i}}{2},\quad (\sigma-C_i)^2+\tau^2=R_i^2")
         st.latex(r"p_i=C_i,\quad q_i=R_i,\quad q=mp+d,\quad m=\frac{q_Q-q_P}{p_Q-p_P},\quad \beta=\arctan(m),\quad d=q_P-mp_P")
 
@@ -119,12 +119,14 @@ with aba_sapata:
     st.markdown(
         "**Roteiro.** (1) Informe `B`, o menor lado, `L`, o maior lado, e `H`, "
         "a espessura compressível abaixo da base. (2) A geometria gera `m′=L/B` "
-        "e `n′=2H/B`; deles saem `A₀`, `A₁`, `A₂`, `F₁`, `F₂` e o fator de forma "
-        "`Iₛ`. (3) Informe o acréscimo de tensão `Δσ`, o módulo médio `Eₛ`, o "
+        "e `n′=2H/B`; `A₀`, `A₁` e `A₂` são termos auxiliares, `F₁` e `F₂` fatores "
+        "parciais, e `Iₛ` o fator de influência de Steinbrenner. (3) Informe o "
+        "acréscimo de tensão `Δσ`, o módulo médio `Eₛ`, o "
         "coeficiente de Poisson `ν` e o fator de embutimento `I_f` lido na tabela "
-        "da aula. (4) A equação combina esses termos e mostra o recalque flexível "
-        "no centro. O exemplo de conversão para fundação rígida é indicado apenas "
-        "para sapata quadrada."
+        "da aula. `m′` e `n′` são razões sem unidade; `α=4` conta os quadrantes "
+        "iguais no centro e `B′=B/2` é a meia largura. (4) A equação fornece `Sₑ`, "
+        "o recalque elástico flexível no centro. O exemplo de conversão para "
+        "fundação rígida vale apenas para sapata quadrada."
     )
     st.latex(r"m'=\frac{L}{B},\qquad n'=\frac{2H}{B}")
     st.latex(
@@ -201,7 +203,7 @@ with aba_regressao:
         r"\hat{y}_i=ax_i+b,\quad e_i=y_i-\hat{y}_i"
     )
     st.latex(
-        r"SQT=\sum(y_i-\bar{y})^2,\quad{}"
+        r"SYY=\sum(y_i-\bar{y})^2,\quad SQT=SYY,\quad{}"
         r"SQR=\sum(\hat{y}_i-\bar{y})^2,\quad SQE=\sum(y_i-\hat{y}_i)^2"
     )
     st.latex(r"SQT=SQR+SQE,\qquad R^2=\frac{SQR}{SQT}=1-\frac{SQE}{SQT},\qquad R=\frac{S_{XY}}{\sqrt{S_{XX}S_{YY}}}")
@@ -345,7 +347,9 @@ with aba_mohr:
         "horizontal que passa por `Mₕ` com a vertical que passa por `Mᵥ`. (5) Escolha "
         "`α`, o ângulo da reta que sai de `P`, medido desde a horizontal no sentido "
         "anti-horário; a outra interseção com o círculo é `Q`, que informa as tensões "
-        "no plano escolhido. O arco desenhado marca esse mesmo `α` para conferência."
+        "no plano escolhido. Na reta `τ=aσ+b`, `a=tan(α)` é a inclinação e `b` "
+        "o intercepto. O parâmetro `t` na equação da reta indica distância ao "
+        "longo dela (não é tempo). O arco marca `α` para conferência."
     )
     st.latex(r"C=\frac{\sigma_v+\sigma_h}{2},\qquad R=\sqrt{\left(\frac{\sigma_v-\sigma_h}{2}\right)^2+\tau_h^2}")
     st.latex(r"\sigma_1=C+R,\qquad \sigma_3=C-R")
@@ -543,9 +547,11 @@ with aba_adensamento:
             else:
                 st.markdown(
                     f"**Trechos:** `Cr` de {sigma_v0:.3f} a {sigma_vm:.3f} kPa "
-                    f"(Δσ′r = {sigma_vm - sigma_v0:.3f} kPa), depois `Cc` de "
+                    f"(Δσ′r = acréscimo de tensão efetiva no trecho Cr: "
+                    f"{sigma_vm - sigma_v0:.3f} kPa), depois `Cc` de "
                     f"{sigma_vm:.3f} a {sigma_final:.3f} kPa "
-                    f"(Δσ′c = {sigma_final - sigma_vm:.3f} kPa)."
+                    f"(Δσ′c = acréscimo de tensão efetiva no trecho Cc: "
+                    f"{sigma_final - sigma_vm:.3f} kPa)."
                 )
                 st.latex(rf"\Delta e_r=C_r\log_{{10}}\!\left(\frac{{{sigma_vm:.3f}}}{{{sigma_v0:.3f}}}\right)={r_ad['delta_e_recompressao']:.6f}")
                 st.latex(rf"\Delta e_v=C_c\log_{{10}}\!\left(\frac{{{sigma_final:.3f}}}{{{sigma_vm:.3f}}}\right)={r_ad['delta_e_virgem']:.6f}")
@@ -592,7 +598,7 @@ with aba_adensamento:
             "no campo percentual, o programa converte U para fração antes de calcular."
         )
         st.latex(r"T_v=\frac{C_vt}{H_d^2}\quad\Longrightarrow\quad t=\frac{T_vH_d^2}{C_v}")
-        st.latex(r"T_v=\frac{\pi}{4}U^2\ (U\leq60\%),\qquad T_v=-0{,}9332\log_{10}(1-U)-0{,}0851\ (U>60\%)")
+        st.latex(r"T_v=\frac{\pi}{4}U^2\ (U\leq0{,}60),\qquad T_v=-0{,}9332\log_{10}(1-U)-0{,}0851\ (U>0{,}60)")
         st.caption("Nas expressões, U é fração: por exemplo, 50% = 0,50. Use Cv em m²/s e Hd em metros; o tempo sai em segundos.")
         with st.expander("Tabela de consulta: U médio × fator tempo Tᵥ", expanded=True):
             tabela_tempo = [
