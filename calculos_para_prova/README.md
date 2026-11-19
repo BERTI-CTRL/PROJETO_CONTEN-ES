@@ -10,6 +10,9 @@ A pagina `05_Calculos_para_prova.py` tem abas de formulario de equacoes,
 recalque imediato de sapata,
 regressao linear, polo do circulo de Mohr, varios circulos com envoltoria e
 trajetoria `p-q`, adensamento primario/secundario e `Ensaios e tensoes`.
+A aba `Areias e argilas` reúne recortes dos slides e explica as curvas de
+areias fofas/compactas, estado crítico, argilas NA/SA, ensaios CU/UU e trajetórias
+`p-q`.
 
 As formulas e o procedimento aparecem no inicio de cada aba. Na sapata,
 `B` e a menor dimensao, `L` a maior, `H` a camada compressivel, `Delta sigma`

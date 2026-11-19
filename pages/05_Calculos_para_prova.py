@@ -32,8 +32,8 @@ st.set_page_config(page_title="Calculos para prova", page_icon="📐", layout="w
 st.title("Calculos rapidos para prova")
 st.caption("Valores e convencoes conforme os exemplos das aulas.")
 
-aba_formulario, aba_sapata, aba_regressao, aba_mohr, aba_multiplos, aba_adensamento, aba_complementares = st.tabs(
-    ["Formulário", "Recalque imediato", "Minimos quadrados", "Polo", "Circulos + envoltoria", "Adensamento", "Ensaios e tensões"]
+aba_formulario, aba_sapata, aba_regressao, aba_mohr, aba_multiplos, aba_adensamento, aba_complementares, aba_areias_argilas = st.tabs(
+    ["Formulário", "Recalque imediato", "Minimos quadrados", "Polo", "Circulos + envoltoria", "Adensamento", "Ensaios e tensões", "Areias e argilas"]
 )
 
 with aba_formulario:
@@ -805,3 +805,147 @@ with aba_complementares:
 
         with st.expander("Conferência com a Lista 04 — questão 10"):
             st.markdown("A questão usa `D=5,0 cm`, `H₀=10,0 cm`, `P=14 kgf` e encurtamento `Δh=0,68 cm`. Daí `εa=0,068`, `A₀=19,635 cm²` e `Ac=19,635/(1−0,068)=21,068 cm²`. A tensão corrigida é `qu=14/21,068=0,6645 kgf/cm²`; para `φu=0`, `Su=qu/2=0,332 kgf/cm²≈32,57 kPa`. Os campos começam com esses mesmos dados convertidos para kN e m.")
+
+with aba_areias_argilas:
+    st.subheader("Resistência das areias e argilas")
+    st.markdown(
+        "Use esta aba para interpretar o formato das curvas dos slides. Os desenhos abaixo são "
+        "recortes do material da aula; servem para reconhecer tendências, não para retirar valores "
+        "numéricos de projeto. Em todos os gráficos, `εa` ou `ε₁` é a deformação axial, "
+        "`σ₁−σ₃` é a tensão desviadora e `σ₃` é a tensão confinante."
+    )
+    aba_areias, aba_argilas, aba_condicoes = st.tabs(
+        ["Areias", "Argilas", "Ensaios e trajetórias"]
+    )
+
+    with aba_areias:
+        st.markdown("### Areia fofa: contração e endurecimento")
+        st.markdown(
+            "**Como ler:** acompanhe a curva `σ₁−σ₃` conforme cresce `εa`. Na areia fofa, "
+            "a resistência mobilizada tende a subir gradualmente até um patamar, sem um pico "
+            "pronunciado. A resposta volumétrica mostra redução de volume (contração). A tensão "
+            "confinante `σ₃` maior desloca a curva para níveis de resistência maiores."
+        )
+        st.image(
+            "assets/resistencia_areias_argilas/areia_fofa_curvas.png",
+            caption="Aula 15–16, slide 2 — resposta típica de areia fofa.",
+            use_container_width=True,
+        )
+
+        st.markdown("### Areia compacta: pico, amolecimento e dilatância")
+        st.markdown(
+            "A areia compacta mobiliza um **pico de resistência** em deformação menor. Depois "
+            "do pico, `σ₁−σ₃` pode cair até um valor residual/estável: isso é amolecimento "
+            "pós-pico. Durante o cisalhamento, a tendência de aumento de volume é a dilatância. "
+            "A posição e a altura do pico dependem também do confinamento `σ₃`."
+        )
+        st.image(
+            "assets/resistencia_areias_argilas/areia_compacta_curvas.png",
+            caption="Aula 15–16, slide 8 — pico e resposta volumétrica da areia compacta.",
+            use_container_width=True,
+        )
+
+        st.markdown("### Estado crítico: caminhos diferentes, mesmo estado final")
+        st.markdown(
+            "`e` é o índice de vazios, `ε₁` é a deformação axial e `ecrit` é o índice de vazios "
+            "no estado crítico para as condições consideradas. Uma amostra inicialmente fofa "
+            "(e maior) tende a diminuir `e`; uma amostra compacta (e menor) tende a aumentá-lo. "
+            "Com cisalhamento continuado, os caminhos se aproximam do estado crítico, em que a "
+            "deformação prossegue com volume e resistência aproximadamente constantes."
+        )
+        st.image(
+            "assets/resistencia_areias_argilas/estado_critico_areias.png",
+            caption="Aula 15–16, slide 17 — caminhos do índice de vazios em direção ao estado crítico.",
+            use_container_width=True,
+        )
+
+    with aba_argilas:
+        st.markdown("### Argila normalmente adensada (NA)")
+        st.markdown(
+            "`NA` significa normalmente adensada: a tensão efetiva atual é a maior tensão "
+            "efetiva que a argila já suportou. No gráfico, a tensão desviadora `σ₁−σ₃` cresce "
+            "com a deformação axial `εa` e tende a um patamar, sem um pico seguido de queda "
+            "marcante. A curva superior corresponde ao maior confinamento `σ₃`; esse confinamento "
+            "permite mobilizar maior tensão desviadora."
+        )
+        st.image(
+            "assets/resistencia_areias_argilas/argila_normalmente_adensada.png",
+            caption="Aula 15–16, slide 27 — tensão desviadora em argila normalmente adensada.",
+            use_container_width=True,
+        )
+
+        st.markdown("### Argila sobreadensada (SA): pico e amolecimento")
+        st.markdown(
+            "`SA` significa sobreadensada. O índice `RSA` (razão de sobreadensamento, equivalente "
+            "ao OCR usado em outros materiais) compara a tensão de pré-adensamento `σ′p` com a "
+            "tensão efetiva de adensamento `σ′c`: `RSA=σ′p/σ′c`. Quanto maior a RSA, maior a "
+            "memória de carregamento. A resposta pode ter pico seguido de queda; o gráfico "
+            "normalizado também compara `((σ₁−σ₃)/σ₃)` entre confinamentos."
+        )
+        st.image(
+            "assets/resistencia_areias_argilas/argila_sobreadensada_tensao_deformacao.png",
+            caption="Aula 15–16, slide 31 — curvas de tensão desviadora e resposta normalizada da argila SA.",
+            use_container_width=True,
+        )
+        st.markdown(
+            "O gráfico volumétrico ajuda a interpretar a forma da curva: em SA pode haver uma "
+            "pequena contração inicial e depois dilatação. A tendência dilatante fica mais "
+            "evidente em sobreadensamento elevado e menor confinamento `σ₃`."
+        )
+        st.image(
+            "assets/resistencia_areias_argilas/argila_sobreadensada_volume.png",
+            caption="Aula 15–16, slide 32 — deformação volumétrica durante o cisalhamento da argila SA.",
+            use_container_width=True,
+        )
+
+    with aba_condicoes:
+        st.markdown("### Ensaio drenado (CD) e não drenado (CU)")
+        st.markdown(
+            "`CD` = adensado e drenado: a água pode sair durante o cisalhamento, então há "
+            "variação de volume; no exemplo do slide, o solo contrai. `CU` = adensado e não "
+            "drenado: a água não sai durante o cisalhamento, então o volume fica constante e "
+            "pode surgir excesso de poropressão `Δu`. O desenho compara `σ₁−σ₃`, deformação, "
+            "volume e poropressão. A forma e o sinal de `Δu` dependem do estado do solo: argila "
+            "NA tende a gerar `Δu` positiva; argila muito SA pode gerar `Δu` negativa."
+        )
+        st.image(
+            "assets/resistencia_areias_argilas/comparacao_CU_CD.png",
+            caption="Aula 15–16, slide 39 — comparação esquemática entre CU e CD.",
+            use_container_width=True,
+        )
+        st.caption("Tensões efetivas: σ′=σ−u. Assim, Δu positiva reduz as tensões principais efetivas; Δu negativa aumenta-as.")
+
+        st.markdown("### Ensaio UU e resistência não drenada")
+        st.markdown(
+            "No ensaio `UU` (não adensado e não drenado), a representação idealizada em tensões "
+            "totais tem círculos de Mohr com o mesmo raio e uma envoltória horizontal: `φu≈0`. "
+            "A resistência não drenada é `Su=τu=(σ₁−σ₃)/2`. Esse `Su` descreve a resistência "
+            "não drenada na condição do ensaio; o intercepto total aparente não deve ser "
+            "interpretado automaticamente como coesão efetiva intrínseca."
+        )
+        st.image(
+            "assets/resistencia_areias_argilas/circulos_UU.png",
+            caption="Aula 15–16, slide 55 — círculos UU e envoltória horizontal idealizada.",
+            use_container_width=True,
+        )
+
+        st.markdown("### Trajetória de tensões `p–q` e envoltória")
+        st.markdown(
+            "Cada círculo de Mohr pode ser representado pelo ponto do topo: `p=(σ₁+σ₃)/2` "
+            "no eixo horizontal e `q=(σ₁−σ₃)/2` no vertical. Ligando os pontos de vários "
+            "estágios obtém-se a trajetória `p–q`. Na convenção do material, a envoltória é "
+            "`q=d+p tanβ`: `tanβ` é a inclinação, `β` seu ângulo com o eixo `p` e `d` o "
+            "intercepto no eixo `q`. Para converter aos parâmetros de Mohr–Coulomb usados no "
+            "slide: `sinφ′=tanβ` e `c′=d/cosφ′`. Use tensões efetivas ou totais de forma "
+            "consistente em toda a trajetória."
+        )
+        st.image(
+            "assets/resistencia_areias_argilas/trajetoria_pq.png",
+            caption="Aula 15–16, slide 45 — representação e trajetória no plano p–q.",
+            use_container_width=True,
+        )
+        st.image(
+            "assets/resistencia_areias_argilas/envoltoria_pq.png",
+            caption="Aula 15–16, slide 47 — reta de envoltória e relação com φ′ e c′.",
+            use_container_width=True,
+        )
