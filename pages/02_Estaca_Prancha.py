@@ -7,18 +7,18 @@ from typing import Any
 import streamlit as st
 from streamlit_local_storage import LocalStorage
 
-from contencoes.calculos_estaca_prancha import (
+from contencoes.calculos.calculos_estaca_prancha import (
     calcular_cortina_ancorada,
     calcular_cortina_em_balanco,
     carregar_exemplos_estaca_prancha,
     validar_entradas_cortina_ancorada,
     validar_entradas_cortina_em_balanco,
 )
-from contencoes.svg_cortes_estaca_prancha import (
+from contencoes.svg.svg_estaca_prancha import (
     gerar_svg_cortina_ancorada,
     gerar_svg_cortina_em_balanco,
 )
-from contencoes.visualizacao_estaca_prancha import (
+from contencoes.visualizacao.visualizacao_estaca_prancha import (
     formatar_numero,
     mostrar_diagrama_pressao_cortina_em_balanco,
     mostrar_memoria_cortina_em_balanco,

@@ -1,11 +1,11 @@
 import unittest
 
-from contencoes.calculos_estaca_prancha import (
+from contencoes.calculos.calculos_estaca_prancha import (
     calcular_cortina_ancorada,
     calcular_cortina_em_balanco,
     carregar_exemplos_estaca_prancha,
 )
-from contencoes.svg_estaca_prancha import (
+from contencoes.svg.svg_estaca_prancha import (
     gerar_svg_cortina_ancorada,
     gerar_svg_cortina_em_balanco,
 )

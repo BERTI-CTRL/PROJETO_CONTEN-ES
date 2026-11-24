@@ -3,8 +3,8 @@ import unittest
 
 import ezdxf
 
-from contencoes.calculos_muro_de_arrimo import calcular_muro, carregar_exemplo_muro
-from contencoes.exportar_muro_arrimo_dxf import gerar_desenho_muro_dxf
+from contencoes.calculos.calculos_muro_de_arrimo import calcular_muro, carregar_exemplo_muro
+from contencoes.cad.exportar_muro_arrimo_dxf import gerar_desenho_muro_dxf
 
 
 class ExportacaoMuroDXFTest(unittest.TestCase):

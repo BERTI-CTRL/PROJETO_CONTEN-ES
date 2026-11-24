@@ -9,7 +9,7 @@ import plotly.graph_objects as go
 import streamlit as st
 from streamlit_local_storage import LocalStorage
 
-from contencoes.calculos_escoradas import (
+from contencoes.calculos.calculos_escoradas import (
     MODELOS_ENVOLTORIA,
     calcular_froehlich,
     calcular_graux,
@@ -22,7 +22,7 @@ from contencoes.calculos_escoradas import (
     validar_ruptura_fundo,
 )
 
-from contencoes.svg_escoradas import (
+from contencoes.svg.svg_escoradas import (
     gerar_svg_froehlich,
     gerar_svg_graux,
     gerar_svg_pressao_aparente,

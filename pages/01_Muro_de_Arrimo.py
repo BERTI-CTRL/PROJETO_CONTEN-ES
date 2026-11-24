@@ -9,13 +9,13 @@ import plotly.graph_objects as go
 import streamlit as st
 from streamlit_local_storage import LocalStorage
 
-from contencoes.calculos_muro_de_arrimo import (
+from contencoes.calculos.calculos_muro_de_arrimo import (
     calcular_muro,
     carregar_exemplo_muro,
     validar_entradas_muro,
 )
-from contencoes.exportar_muro_arrimo_dxf import gerar_desenho_muro_dxf
-from contencoes.memorias_passo_a_passo import montar_memorial_passo_a_passo_muro
+from contencoes.cad.exportar_muro_arrimo_dxf import gerar_desenho_muro_dxf
+from contencoes.visualizacao.memorias_passo_a_passo import montar_memorial_passo_a_passo_muro
 
 
 st.set_page_config(page_title="Muro de arrimo | Contenções", page_icon="🧱", layout="wide")

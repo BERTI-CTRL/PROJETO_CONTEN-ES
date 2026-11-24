@@ -8,15 +8,15 @@ import plotly.graph_objects as go
 import streamlit as st
 from streamlit_local_storage import LocalStorage
 
-from contencoes.calculos_estabilidade_taludes import (
+from contencoes.calculos.calculos_estabilidade_taludes import (
     calcular_estabilidade_talude,
     calcular_geometria_talude,
     carregar_exemplo_talude,
     gerar_raios_candidatos_padrao,
     validar_entradas_talude,
 )
-from contencoes.exportar_talude_dxf import gerar_desenho_talude_dxf
-from contencoes.memorias_passo_a_passo import montar_memorial_passo_a_passo_talude
+from contencoes.cad.exportar_talude_dxf import gerar_desenho_talude_dxf
+from contencoes.visualizacao.memorias_passo_a_passo import montar_memorial_passo_a_passo_talude
 
 
 st.set_page_config(page_title="Talude | Contenções", page_icon="⛰️", layout="wide")

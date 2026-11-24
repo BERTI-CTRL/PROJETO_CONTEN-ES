@@ -1,6 +1,6 @@
 """Cortes SVG da página de escavações escoradas."""
 
-from contencoes.svg_perfil_estaca import Perfil, cota, linha, numero, painel, retangulo, texto
+from contencoes.svg.svg_perfil_estaca import Perfil, cota, linha, numero, painel, retangulo, texto
 
 AZUL = "#146e93"
 ACO = "#23465f"

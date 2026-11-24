@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from contencoes.svg_perfil_estaca import Perfil, cota, linha, numero, painel, retangulo, texto
+from contencoes.svg.svg_perfil_estaca import Perfil, cota, linha, numero, painel, retangulo, texto
 
 
 def gerar_svg_cortina_em_balanco(

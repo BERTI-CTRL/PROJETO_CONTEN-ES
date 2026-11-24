@@ -8,13 +8,13 @@ estaca-prancha, estruturas escoradas e estabilidade de taludes circulares.
 
 - `app.py`: página inicial.
 - `pages/01_Muro_de_Arrimo.py`: interface do muro, campos, gráficos e memória de cálculo.
-- `contencoes/calculos_muro_de_arrimo.py`: validações e cálculos do muro em Python puro.
 - `pages/02_Estaca_Prancha.py`: interface dos casos em balanço e ancorado.
-- `contencoes/calculos_estaca_prancha.py`: validações, empuxos e equilíbrio das cortinas em Python puro.
 - `pages/03_Escoradas.py`: interface das pressões aparentes e verificações de fundo.
-- `contencoes/calculos_escoradas.py`: fórmulas e validações da aba Escoradas em Python puro.
 - `pages/04_Estabilidade_de_Taludes.py`: interface, dados, gráficos e memória das fatias.
-- `contencoes/calculos_estabilidade_taludes.py`: geometria e cálculos de Fellenius em Python puro.
+- `contencoes/calculos/`: fórmulas e validações das quatro estruturas em Python puro.
+- `contencoes/svg/`: geração dos croquis vetoriais de estaca-prancha e escoradas.
+- `contencoes/cad/`: exportação de desenhos DXF de muros e taludes.
+- `contencoes/visualizacao/`: módulos de apresentação de gráficos e memórias de cálculo.
 
 O prefixo numérico do arquivo da página determina sua ordem na navegação do
 Streamlit.
