@@ -14,7 +14,7 @@ from contencoes.calculos_estaca_prancha import (
     validar_entradas_cortina_ancorada,
     validar_entradas_cortina_em_balanco,
 )
-from contencoes.svg_estaca_prancha import (
+from contencoes.svg_cortes_estaca_prancha import (
     gerar_svg_cortina_ancorada,
     gerar_svg_cortina_em_balanco,
 )
