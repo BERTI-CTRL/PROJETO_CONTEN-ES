@@ -96,7 +96,8 @@ def mostrar_memoria_cortina_em_balanco(resultado: dict[str, Any]) -> None:
 def mostrar_diagrama_pressao_cortina_ancorada(resultado: dict[str, Any]) -> None:
     figura_pressao = go.Figure()
     for chave_diagrama, nome_diagrama, cor_diagrama, sinal_pressao, preenchimento in (
-        ("ativo", "Ativo · face posterior", "#c34b3c", 1.0, "rgba(195, 75, 60, 0.12)"),
+        ("ativo", "Solo ativo · tardoz", "#c34b3c", 1.0, "rgba(195, 75, 60, 0.12)"),
+        ("hidrostatico", "Água · diferencial", "#166a75", 1.0, "rgba(22, 106, 117, 0.10)"),
         (
             "passivo_mobilizado",
             "Passivo mobilizado · face frontal",
@@ -122,7 +123,7 @@ def mostrar_diagrama_pressao_cortina_ancorada(resultado: dict[str, Any]) -> None
         )
     figura_pressao.add_vline(x=0, line_color="#829096", line_width=1)
     figura_pressao.update_layout(
-        title="Pressões laterais · ativa e passiva mobilizada",
+        title="Pressões laterais · solo e água",
         height=470,
         margin={"l": 65, "r": 25, "t": 55, "b": 170},
         xaxis_title="Pressão (kPa) · ativa à direita, passiva à esquerda",
@@ -155,7 +156,11 @@ def mostrar_memoria_cortina_ancorada(resultado: dict[str, Any]) -> None:
             r"\quad E_4=\frac{K_a\gamma_2(D+f)^2}{2}"
         )
         st.latex(
-            r"A=E_a-E_{p,mob}"
+            r"E_w=\frac{\gamma_w(D+f)^2}{2}"
+            r"\qquad M_w=E_w\left(h_a+\frac{2(D+f)}{3}\right)"
+        )
+        st.latex(
+            r"A=E_a+E_w-E_{p,mob}"
             r"\qquad FS_{tombamento}=\frac{M_p}{M_a}"
         )
         st.caption(
@@ -177,14 +182,28 @@ def mostrar_memoria_cortina_ancorada(resultado: dict[str, Any]) -> None:
         linhas_empuxos.extend(
             [
                 {
-                    "Parcela": "Empuxo ativo total",
+                    "Parcela": "Empuxo ativo do solo",
                     "Empuxo (kN/m)": formatar_numero(
                         resultado["empuxo_ativo_total_kN_m"]
                     ),
                     "Braço assinado (m)": None,
                     "Momento assinado (kN·m/m)": formatar_numero(
-                        resultado["momento_ativo_resultante_kNm_m"]
+                        resultado["momento_ativo_solo_kNm_m"]
                     ),
+                },
+                {
+                    "Parcela": "Água · diferencial hidrostático",
+                    "Empuxo (kN/m)": formatar_numero(resultado["empuxo_hidrostatico_kN_m"]),
+                    "Braço assinado (m)": formatar_numero(resultado["braco_hidrostatico_m"]),
+                    "Momento assinado (kN·m/m)": formatar_numero(resultado["momento_hidrostatico_kNm_m"]),
+                },
+                {
+                    "Parcela": "Total atuante · solo e água",
+                    "Empuxo (kN/m)": formatar_numero(
+                        resultado["empuxo_ativo_total_kN_m"] + resultado["empuxo_hidrostatico_kN_m"]
+                    ),
+                    "Braço assinado (m)": None,
+                    "Momento assinado (kN·m/m)": formatar_numero(resultado["momento_ativo_resultante_kNm_m"]),
                 },
                 {
                     "Parcela": "Empuxo passivo mobilizado",

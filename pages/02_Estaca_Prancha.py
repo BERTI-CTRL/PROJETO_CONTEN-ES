@@ -56,6 +56,7 @@ CAMPOS_CORTINA_ANCORADA = (
     "altura_ancoragem_acima_na_m",
     "percentual_passivo_mobilizado",
     "fator_seguranca_minimo_tombamento",
+    "peso_especifico_agua_kN_m3",
 )
 
 
@@ -335,6 +336,13 @@ with aba_ancorada:
             step=0.1,
             key=_chave_widget("cortina_ancorada", "fator_seguranca_minimo_tombamento"),
         )
+        st.number_input(
+            "Peso específico da água, γw (kN/m³)",
+            min_value=0.0,
+            step=0.1,
+            key=_chave_widget("cortina_ancorada", "peso_especifico_agua_kN_m3"),
+            help="Água no tardoz e lado escavado drenado. Use 0 para anular a parcela diferencial.",
+        )
         st.caption(
             "A ancoragem fica acima do N.A.; γ₂ já é o peso específico submerso. "
             "O ângulo φ é igual nas duas camadas."
@@ -362,20 +370,24 @@ with aba_ancorada:
         )
         st.divider()
         st.subheader("Resultados da cortina ancorada")
-        colunas_resultado_ancorada = st.columns(4)
+        colunas_resultado_ancorada = st.columns(5)
         colunas_resultado_ancorada[0].metric(
-            "Empuxo ativo total",
+            "Empuxo ativo do solo",
             f"{formatar_numero(resultado_ancorada['empuxo_ativo_total_kN_m'])} kN/m",
         )
         colunas_resultado_ancorada[1].metric(
+            "Empuxo da água",
+            f"{formatar_numero(resultado_ancorada['empuxo_hidrostatico_kN_m'])} kN/m",
+        )
+        colunas_resultado_ancorada[2].metric(
             "Passivo mobilizado",
             f"{formatar_numero(resultado_ancorada['empuxo_passivo_mobilizado_kN_m'])} kN/m",
         )
-        colunas_resultado_ancorada[2].metric(
+        colunas_resultado_ancorada[3].metric(
             "Força no tirante",
             f"{formatar_numero(resultado_ancorada['forca_tirante_kN_m'])} kN/m",
         )
-        colunas_resultado_ancorada[3].metric(
+        colunas_resultado_ancorada[4].metric(
             "FS ao tombamento",
             formatar_numero(resultado_ancorada["fator_seguranca_tombamento"], 3),
             resultado_ancorada["status_tombamento"],
@@ -392,7 +404,7 @@ with aba_ancorada:
         st.subheader("Diagrama de pressões")
         st.caption(
             "A pressão passiva está limitada à ficha abaixo da escavação. "
-            "O exemplo não considera diferencial hidrostático entre as faces."
+            "A pressão diferencial da água atua do N.A. até a ponta, com o lado escavado drenado."
         )
         mostrar_diagrama_pressao_cortina_ancorada(resultado_ancorada)
         mostrar_memoria_cortina_ancorada(resultado_ancorada)
@@ -410,5 +422,5 @@ armazenamento_local.setItem(
 
 st.caption(
     "Limites desta fase: Rankine, solo sem coesão, superfície horizontal e duas camadas no caso ancorado. "
-    "Não inclui diferencial hidrostático, estabilidade global, deformações ou dimensionamento da cortina e do tirante."
+    "O modelo inclui o diferencial hidrostático com lado escavado drenado. Estabilidade global, deformações e dimensionamento estrutural estão fora do escopo."
 )

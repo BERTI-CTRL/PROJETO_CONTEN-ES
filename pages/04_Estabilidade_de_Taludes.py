@@ -576,7 +576,11 @@ def _mostrar_croqui_entrada_talude(
             texto_circulo = (
                 f"R = {float(circulo['raio_m']):g} m · "
                 f"C = ({float(circulo['centro_x_m']):g}; {float(circulo['centro_y_m']):g}) m · "
-                f"FS = {float(circulo['fator_seguranca']):g}"
+                + (
+                    f"FS Fellenius = {circulo['fator_seguranca']:g}"
+                    if circulo["fator_seguranca"] is not None
+                    else f"FS Bishop = {circulo['bishop']['fator_seguranca']:g}"
+                )
             )
         else:
             texto_fatia = "Sem fatia de referência disponível."
@@ -971,48 +975,51 @@ def _coordenadas_arco_y(circulo: dict[str, Any]) -> list[float]:
 
 
 def _mostrar_grafico_fator_raio(
-    circulos: list[dict[str, Any]], identificacao_critica: str | None, fs_maximo_grafico: float
+    circulos: list[dict[str, Any]],
+    identificacao_critica: str | None,
+    identificacao_bishop: str | None,
+    fs_maximo_grafico: float,
 ) -> None:
-    circulos_validos = sorted(
-        (circulo for circulo in circulos if circulo["situacao"] == "VÁLIDO"),
-        key=lambda circulo: circulo["raio_m"],
-    )
-    figura_fs_raio = go.Figure()
-    cores_pontos = [
-        "#c34b3c" if circulo["identificacao"] == identificacao_critica else "#176452"
-        for circulo in circulos_validos
-    ]
-    textos_pontos = [
-        f"{circulo['identificacao']} · crítico"
-        if circulo["identificacao"] == identificacao_critica
-        else circulo["identificacao"]
-        for circulo in circulos_validos
-    ]
-    figura_fs_raio.add_trace(
-        go.Scatter(
-            x=[circulo["raio_m"] for circulo in circulos_validos],
-            y=[circulo["fator_seguranca"] for circulo in circulos_validos],
-            mode="markers",
-            marker={"color": cores_pontos, "size": 10, "line": {"color": "white", "width": 1}},
-            text=textos_pontos,
-            name="Círculos válidos",
-            hovertemplate="%{text}<br>R = %{x:.3f} m<br>FS = %{y:.3f}<extra></extra>",
+    figura = go.Figure()
+    for metodo, critico, cor, simbolo in (
+        ("Fellenius", identificacao_critica, "#176452", "circle"),
+        ("Bishop", identificacao_bishop, "#285b97", "diamond"),
+    ):
+        pontos = []
+        for circulo in circulos:
+            dados = circulo if metodo == "Fellenius" else circulo["bishop"]
+            if dados["fator_seguranca"] is not None:
+                pontos.append((circulo, dados["fator_seguranca"]))
+        figura.add_trace(
+            go.Scatter(
+                x=[c["raio_m"] for c, fs in pontos],
+                y=[fs for c, fs in pontos],
+                mode="markers",
+                marker={
+                    "color": cor, "symbol": simbolo, "size": 11,
+                    "line": {
+                        "color": "#182736",
+                        "width": [2.5 if c["identificacao"] == critico else 0 for c, fs in pontos],
+                    },
+                },
+                text=[c["identificacao"] for c, fs in pontos],
+                name=metodo,
+                hovertemplate="%{text}<br>R = %{x:.3f} m<br>FS = %{y:.3f}<extra>%{fullData.name}</extra>",
+            )
         )
-    )
-    figura_fs_raio.update_layout(
-        title="Comparação do fator de segurança por raio",
+    figura.update_layout(
         height=440,
-        margin={"l": 18, "r": 18, "t": 55, "b": 35},
+        margin={"l": 18, "r": 18, "t": 30, "b": 35},
         xaxis_title="Raio R (m)",
         yaxis_title="Fator de segurança, FS",
-        showlegend=False,
+        legend={"orientation": "h"},
         hovermode="closest",
         paper_bgcolor="white",
         plot_bgcolor="white",
     )
-    figura_fs_raio.update_yaxes(range=[0, fs_maximo_grafico], rangemode="tozero")
+    figura.update_yaxes(range=[0, fs_maximo_grafico], rangemode="tozero")
     st.plotly_chart(
-        figura_fs_raio,
+        figura,
         width="stretch",
         theme=None,
         config=_configuracao_download_png("fator_seguranca_por_raio"),
@@ -1248,7 +1255,7 @@ def _mostrar_diagnostico_circulo(circulo: dict[str, Any]) -> None:
         fatia for fatia in fatias if fatia["situacao"] == "N EFETIVA NEGATIVA"
     ]
     st.warning(
-        f"O {circulo['identificacao']} não tem FS válido: {circulo['situacao']}. "
+        f"O {circulo['identificacao']} não tem FS válido por Fellenius: {circulo['situacao']}. "
         "Veja o motivo antes de comparar este círculo com os válidos."
     )
     if circulo["situacao"] == "RAIO < d/2":
@@ -1274,7 +1281,7 @@ def _mostrar_diagnostico_circulo(circulo: dict[str, Any]) -> None:
         st.info(
             f"N′ (lido ‘N linha’) ficou negativo. Fatias afetadas: {lista_fatias}. "
             "A conta exigiria tração na base, que o solo não resiste. "
-            "Por isso a planilha e o Python deixam o FS em branco."
+            "Por isso o FS de Fellenius fica em branco."
         )
         for fatia in fatias_normais_negativas:
             st.write(
@@ -1360,12 +1367,12 @@ else:
 st.markdown("<style>.block-container{padding-top:1.5rem;padding-bottom:3rem}</style>", unsafe_allow_html=True)
 st.title("◢ Estabilidade de taludes")
 st.caption(
-    "Método das fatias de Fellenius · superfície circular · até duas camadas · "
+    "Fellenius e Bishop Simplificado · superfície circular · até duas camadas · "
     "cálculo por metro de largura."
 )
 st.info(
     "Informe a geometria, água e parâmetros do solo para comparar os raios circulares pelo método "
-    "de Fellenius. Veja o FS de cada círculo, a busca complementar em malha, as fatias e o perfil; "
+    "de Fellenius e de Bishop Simplificado. Veja o FS de cada círculo, as fatias e o perfil; "
     "o CAD pode ser baixado para o círculo selecionado."
 )
 if aviso_armazenamento:
@@ -1392,7 +1399,7 @@ with st.container(border=True):
         _mostrar_croqui_entrada_talude(
             entradas_atuais_croqui,
             resultado_croqui["geometria"],
-            resultado_croqui["circulo_critico"],
+            resultado_croqui["circulo_critico"] or resultado_croqui["circulo_critico_bishop"],
         )
     colunas_geometria = st.columns(4)
     colunas_geometria[0].number_input(
@@ -1526,15 +1533,19 @@ else:
     resultado_talude = resultado_croqui or calcular_estabilidade_talude(entradas_talude)
     circulos = resultado_talude["circulos"]
     circulo_critico = resultado_talude["circulo_critico"]
-    opcoes_circulos = ["Crítico"] + [circulo["identificacao"] for circulo in circulos]
+    critico_bishop = resultado_talude["circulo_critico_bishop"]
+    opcoes_circulos = ["Crítico", "Crítico · Bishop"] + [c["identificacao"] for c in circulos]
     identificacao_desenho = st.selectbox(
         "Círculo para analisar",
         opcoes_circulos,
+        index=1 if not circulo_critico and critico_bishop else 0,
         key="identificacao_circulo_desenho_talude",
-        help="Escolha um candidato para ver seu perfil, suas fatias e os motivos de invalidação.",
+        help="Crítico seleciona o menor FS por Fellenius. Crítico · Bishop seleciona o menor FS convergido por Bishop.",
     )
     if identificacao_desenho == "Crítico":
         circulo_desenhado = circulo_critico
+    elif identificacao_desenho == "Crítico · Bishop":
+        circulo_desenhado = critico_bishop
     else:
         circulo_desenhado = next(
             circulo
@@ -1551,17 +1562,29 @@ else:
             "Centro x_c (m)": circulo["centro_x_m"],
             "Centro y_c (m)": circulo["centro_y_m"],
             "FS · Fellenius": _formatar_numero(circulo["fator_seguranca"], 3),
+            "FS · Bishop": _formatar_numero(circulo["bishop"]["fator_seguranca"], 3),
+            "Bishop · estado": circulo["bishop"]["situacao"],
+            "Bishop · iterações": circulo["bishop"]["iteracoes"],
             "Σ F_R válida (kN/m)": _formatar_numero(circulo["resistencia_total_kN_m"], 2),
             "Σ F_mob válida (kN/m)": _formatar_numero(circulo["forca_mobilizada_total_kN_m"], 2),
-            "Situação": circulo["situacao"],
+            "Fellenius · estado": circulo["situacao"],
         }
         for circulo in circulos
     ]
     st.dataframe(linhas_circulos, hide_index=True, width="stretch")
     st.caption(
-        "Só círculos com situação VÁLIDO recebem FS e somatórios totais. "
-        "Selecione um círculo inválido para ver a fatia e o motivo; ele não entra no gráfico FS × raio."
+        "Cada método seleciona o menor FS entre seus próprios candidatos válidos. "
+        "A malha de centros e os gráficos de forças por fatia usam Fellenius."
     )
+    if critico_bishop:
+        st.metric(
+            "FS crítico · Bishop Simplificado",
+            _formatar_numero(critico_bishop["bishop"]["fator_seguranca"]),
+            f"{critico_bishop['identificacao']} · R = {_formatar_numero(critico_bishop['raio_m'])} m",
+            delta_color="off",
+        )
+    else:
+        st.info("Nenhum círculo candidato convergiu por Bishop Simplificado.")
 
     if circulo_critico:
         colunas_resultado = st.columns(4)
@@ -1601,27 +1624,36 @@ else:
                 f"{circulo_desenhado['situacao']} e não entra no cálculo do FS crítico."
             )
     else:
-        st.warning("Nenhum dos raios candidatos produziu um círculo válido. Ajuste os raios ou a geometria.")
+        st.warning("Nenhum dos raios candidatos produziu um círculo válido por Fellenius.")
+
+    st.subheader("Fator de segurança por raio")
+    st.caption("O contorno destaca o círculo crítico de cada método.")
+    limite_fs_grafico = st.slider(
+        "Limite superior do eixo FS", min_value=1.0, max_value=20.0, value=5.0, step=0.5
+    )
+    _mostrar_grafico_fator_raio(
+        circulos,
+        circulo_critico["identificacao"] if circulo_critico else None,
+        critico_bishop["identificacao"] if critico_bishop else None,
+        limite_fs_grafico,
+    )
 
     if circulo_desenhado:
         _mostrar_diagnostico_circulo(circulo_desenhado)
         st.subheader(f"Perfil e círculo · {circulo_desenhado['identificacao']}")
         _mostrar_grafico_geometria(entradas_talude, resultado_talude, circulo_desenhado)
 
-        st.subheader("Fator de segurança por raio")
-        st.caption(
-            "Cada ponto representa um dos raios candidatos válidos; o gráfico não liga os pontos "
-            "porque são círculos discretos, não uma curva contínua. O ponto vermelho marca o círculo crítico. "
-            "Passe o mouse no gráfico para baixar PNG."
-        )
-        limite_fs_grafico = st.slider(
-            "Limite superior do eixo FS", min_value=1.0, max_value=20.0, value=5.0, step=0.5
-        )
-        _mostrar_grafico_fator_raio(
-            circulos,
-            circulo_critico["identificacao"] if circulo_critico else None,
-            limite_fs_grafico,
-        )
+        bishop = circulo_desenhado["bishop"]
+        with st.expander(f"Bishop Simplificado · {circulo_desenhado['identificacao']}"):
+            st.write(f"**{bishop['situacao']}**")
+            st.latex(
+                r"FS_{k+1}=\frac{\sum_i[c'_i b_i+(W_i-u_i b_i)\tan\varphi'_i]/m_{\alpha,i}}"
+                r"{\sum_i W_i\sin\alpha_i},\quad"
+                r"m_{\alpha,i}=\cos\alpha_i+\frac{\sin\alpha_i\tan\varphi'_i}{FS_k}"
+            )
+            st.caption("FS inicial 1,5 · até 20 iterações · tolerância de 0,0001.")
+            if bishop["historico"]:
+                st.dataframe(bishop["historico"], hide_index=True, width="stretch")
 
         if circulo_desenhado["fatias"]:
             st.subheader(f"Gráficos por fatia · {circulo_desenhado['identificacao']}")
@@ -1649,9 +1681,9 @@ else:
             st.info("Este raio é menor que d/2; não existe círculo para dividir em fatias.")
     _mostrar_memoria_calculo()
     st.caption(
-        "Escopo: ruptura circular por Fellenius, N.A. horizontal e até duas camadas. "
-        "Não inclui Bishop, superfícies não circulares, sismo, fluxo não hidrostático "
-        "ou busca automática dos pontos de entrada e saída."
+        "Escopo: ruptura circular por Fellenius e Bishop Simplificado, N.A. horizontal e até duas camadas. "
+        "Superfícies não circulares, sismo, fluxo não hidrostático "
+        "e busca automática dos pontos de entrada e saída estão fora do escopo."
     )
     with st.expander("Memorial passo a passo · como fazer o cálculo à mão"):
         st.markdown(

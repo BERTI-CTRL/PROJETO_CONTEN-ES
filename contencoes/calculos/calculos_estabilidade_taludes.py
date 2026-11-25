@@ -5,6 +5,8 @@ from __future__ import annotations
 import math
 from typing import Any
 
+from contencoes.calculos.bishop_simplificado import calcular_bishop
+
 
 INCREMENTOS_RAIOS_PADRAO_M = [0.0, 0.5, 1.5, 2.5, 3.5, 5.5, 7.5, 11.5, 15.5, 19.5]
 
@@ -203,6 +205,14 @@ def calcular_estabilidade_talude(entradas_talude: dict[str, Any]) -> dict[str, A
             )
         )
 
+    for circulo in circulos:
+        circulo["bishop"] = calcular_bishop(circulo, entradas_talude)
+    critico_bishop = min(
+        (c for c in circulos if c["bishop"]["fator_seguranca"] is not None),
+        key=lambda c: c["bishop"]["fator_seguranca"],
+        default=None,
+    )
+
     circulos_validos = [circulo for circulo in circulos if circulo["situacao"] == "VÁLIDO"]
     circulo_critico = (
         min(circulos_validos, key=lambda circulo: circulo["fator_seguranca"])
@@ -215,6 +225,7 @@ def calcular_estabilidade_talude(entradas_talude: dict[str, Any]) -> dict[str, A
         "perfil_terreno": _criar_perfil_para_grafico(entradas_talude),
         "circulos": circulos,
         "circulo_critico": circulo_critico,
+        "circulo_critico_bishop": critico_bishop,
         "busca_centros": busca_centros,
         "resumo": {
             "quantidade_circulos_validos": len(circulos_validos),

@@ -31,6 +31,7 @@ def carregar_exemplos_estaca_prancha() -> dict[str, dict[str, float]]:
             "altura_ancoragem_acima_na_m": 0.9,
             "percentual_passivo_mobilizado": 100.0,
             "fator_seguranca_minimo_tombamento": 1.5,
+            "peso_especifico_agua_kN_m3": 9.81,
         },
     }
 
@@ -223,6 +224,10 @@ def validar_entradas_cortina_ancorada(entradas: dict[str, Any]) -> list[str]:
     ):
         erros.append("A ancoragem deve ficar entre a superfície e o nível d’água.")
 
+    peso_agua = entradas.get("peso_especifico_agua_kN_m3", 9.81)
+    if not _numero_finito(peso_agua) or peso_agua < 0:
+        erros.append("O peso específico da água deve ser finito e não negativo.")
+
     return list(dict.fromkeys(erros))
 
 
@@ -341,9 +346,15 @@ def calcular_cortina_ancorada(entradas: dict[str, Any]) -> dict[str, Any]:
     empuxo_ativo_total_kN_m = sum(
         parcela["empuxo_kN_m"] for parcela in parcelas_empuxo_ativo
     )
-    momento_ativo_resultante_kNm_m = sum(
+    peso_agua = entradas.get("peso_especifico_agua_kN_m3", 9.81)
+    pressao_agua_na_ponta_kPa = peso_agua * profundidade_na_ate_ponta_m
+    empuxo_agua_kN_m = 0.5 * pressao_agua_na_ponta_kPa * profundidade_na_ate_ponta_m
+    braco_agua_m = altura_ancoragem_acima_na_m + 2.0 * profundidade_na_ate_ponta_m / 3.0
+    momento_agua_kNm_m = empuxo_agua_kN_m * braco_agua_m
+    momento_solo_kNm_m = sum(
         parcela["momento_assinado_kNm_m"] for parcela in parcelas_empuxo_ativo
     )
+    momento_ativo_resultante_kNm_m = momento_solo_kNm_m + momento_agua_kNm_m
     coeficiente_passivo_mobilizado = (
         coeficiente_passivo_rankine * fracao_passivo_mobilizado
     )
@@ -356,7 +367,9 @@ def calcular_cortina_ancorada(entradas: dict[str, Any]) -> dict[str, Any]:
     empuxo_passivo_mobilizado_kN_m = (
         empuxo_passivo_teorico_kN_m * fracao_passivo_mobilizado
     )
-    forca_tirante_kN_m = empuxo_ativo_total_kN_m - empuxo_passivo_mobilizado_kN_m
+    forca_tirante_kN_m = (
+        empuxo_ativo_total_kN_m + empuxo_agua_kN_m - empuxo_passivo_mobilizado_kN_m
+    )
     braco_passivo_em_relacao_ancoragem_m = (
         altura_ancoragem_acima_na_m
         + profundidade_na_ate_escavacao_m
@@ -378,7 +391,7 @@ def calcular_cortina_ancorada(entradas: dict[str, Any]) -> dict[str, Any]:
         )
     if fator_seguranca_tombamento is None:
         avisos.append("Não foi possível obter um momento ativo resultante positivo para calcular o FS.")
-        status_tombamento = "INDEFINIDO"
+        status_tombamento = "REVER"
     elif fator_seguranca_tombamento >= fator_seguranca_minimo_tombamento and not avisos:
         status_tombamento = "ATENDE"
     else:
@@ -405,6 +418,10 @@ def calcular_cortina_ancorada(entradas: dict[str, Any]) -> dict[str, Any]:
             * ficha_abaixo_escavacao_m
         ),
         "empuxo_ativo_total_kN_m": empuxo_ativo_total_kN_m,
+        "empuxo_hidrostatico_kN_m": empuxo_agua_kN_m,
+        "braco_hidrostatico_m": braco_agua_m,
+        "momento_hidrostatico_kNm_m": momento_agua_kNm_m,
+        "momento_ativo_solo_kNm_m": momento_solo_kNm_m,
         "empuxo_ativo_por_parcela": parcelas_empuxo_ativo,
         "empuxo_passivo_teorico_kN_m": empuxo_passivo_teorico_kN_m,
         "empuxo_passivo_mobilizado_kN_m": empuxo_passivo_mobilizado_kN_m,
@@ -429,6 +446,13 @@ def calcular_cortina_ancorada(entradas: dict[str, Any]) -> dict[str, Any]:
                 {
                     "profundidade_m": profundidade_ponta_abaixo_superficie_m,
                     "pressao_kPa": pressao_ativa_na_ponta_kPa,
+                },
+            ],
+            "hidrostatico": [
+                {"profundidade_m": espessura_camada_superior_ate_na_m, "pressao_kPa": 0.0},
+                {
+                    "profundidade_m": profundidade_ponta_abaixo_superficie_m,
+                    "pressao_kPa": pressao_agua_na_ponta_kPa,
                 },
             ],
             "passivo_mobilizado": [

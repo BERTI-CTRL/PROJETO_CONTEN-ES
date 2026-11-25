@@ -54,14 +54,15 @@ A página 2 contém dois casos baseados na aba Estaca-prancha da planilha:
 - **Cortina em balanço:** solo granular homogêneo, coeficientes de Rankine,
   fração mobilizada do empuxo passivo e acréscimo prático sobre a ficha teórica.
 - **Cortina ancorada:** ficha conhecida, duas camadas, sobrecarga, nível d’água,
-  força no tirante e fator de segurança ao tombamento em relação à ancoragem.
+  empuxo hidrostático diferencial, força no tirante e fator de segurança ao
+  tombamento em relação à ancoragem.
 
 O exemplo em balanço resulta em ficha teórica de aproximadamente **6,12 m** e
-ficha preliminar de **7,34 m**. O exemplo ancorado resulta em empuxo ativo de
-**307,50 kN/m**, passivo mobilizado de **220,50 kN/m**, força no tirante de
-**87,00 kN/m** e FS de aproximadamente **1,15**, classificado como “REVER” para
-FS mínimo de 1,50. O caso ancorado adota o peso específico submerso informado
-na planilha e não calcula diferencial hidrostático entre as faces.
+ficha preliminar de **7,34 m**. Com os valores padrão da ancorada, o empuxo ativo
+do solo é **307,50 kN/m**, o passivo mobilizado é **220,50 kN/m** e a parcela
+da água é **275,91 kN/m**. A força no tirante fica em **362,91 kN/m**, com
+FS de **0,529**. O modelo da planilha atual considera água no tardoz até a ponta
+e o lado escavado drenado. Para anular o diferencial, use γw = 0.
 
 Os modelos usam Rankine, solo sem coesão e superfície horizontal. Não incluem
 estabilidade global, deformações ou dimensionamento estrutural da cortina e do
@@ -70,19 +71,20 @@ tirante, e não substituem projeto geotécnico.
 ## Estabilidade de taludes
 
 A página `04_Estabilidade_de_Taludes.py` calcula a estabilidade de superfícies
-circulares pelo método das fatias de Fellenius. Compara dez círculos que passam
-pelos pontos de saída e entrada indicados; os raios podem ser editados e o
-menor FS válido é identificado. O perfil permite inclinação variável do terreno
-a montante, face H:V editável, crista, pé e terreno inferior. Inclui sobrecarga
+circulares por Fellenius e Bishop Simplificado. Compara dez círculos que passam
+pelos pontos de saída e entrada indicados. Os raios são editáveis e cada método
+identifica seu menor FS válido. A malha de centros usa Fellenius. O perfil
+permite inclinação variável do terreno a montante, face H:V editável, crista,
+pé e terreno inferior. Inclui sobrecarga
 uniforme na crista, N.A. horizontal, até duas camadas horizontais e de 4 a 50
-fatias. O exemplo inicial reproduz a aba Talude: H = 8 m, H:V = 1,5, β = 0°,
+fatias. O exemplo padrão do app usa H = 8 m, H:V = 1,5, β = 0°,
 h₁ = 3 m, zNA = 7,8 m e 20 fatias. A camada 1 usa γ/γsat = 18/20 kN/m³,
 c′ = 10 kPa e φ′ = 30°; a camada 2 usa 20/21 kN/m³, c′ = 5 kPa e φ′ = 30°.
-O círculo crítico da planilha tem FS ≈ **1,446**, raio ≈ **14,221 m** e centro
+Nesse exemplo, o crítico por Fellenius tem FS ≈ **1,446**, raio ≈ **14,221 m** e centro
 (x, y) ≈ **(2,098 m; 13,982 m)**.
 
 O resultado depende dos raios candidatos e da discretização. O modelo não
-inclui Bishop, superfícies não circulares, sismo, fluxo não hidrostático ou
+inclui superfícies não circulares, sismo, fluxo não hidrostático ou
 busca automática dos pontos de entrada e saída. Não representa uma verificação
 de projeto geotécnico nem aplica um limite universal para o fator de segurança.
 

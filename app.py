@@ -107,7 +107,7 @@ paginas_projeto = [
     {
         "arquivo": "pages/04_Estabilidade_de_Taludes.py",
         "titulo": "◢ Estabilidade de taludes",
-        "descricao": "Analise superfícies circulares pelo método das fatias de Fellenius.",
+        "descricao": "Analise superfícies circulares por Fellenius e Bishop Simplificado.",
         "recursos": [
             "Compare fatores de segurança dos raios candidatos e da malha de centros.",
             "Inspecione o perfil, as fatias e a memória de cálculo.",

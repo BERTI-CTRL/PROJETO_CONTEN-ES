@@ -92,12 +92,13 @@ def gerar_svg_cortina_ancorada(
             f"γ₂ = {numero(entradas['peso_especifico_solo_submerso_kN_m3'])} kN/m³",
             f"φ = {numero(entradas['angulo_atrito_solo_graus'], 1)}° · "
             f"Kₚ mobilizado = {numero(entradas['percentual_passivo_mobilizado'], 1)}%",
+            f"γw = {numero(entradas.get('peso_especifico_agua_kN_m3', 9.81))} kN/m³",
             f"FS mínimo ao tombamento = {numero(entradas['fator_seguranca_minimo_tombamento'])}",
         ]),
-        perfil.camada(726, 749, 259, 275),
-        texto(759, 272, "Solo acima do N.A.", tamanho=15),
-        perfil.camada(726, 749, 288, 304, "submerso"),
-        texto(759, 301, "Solo submerso", tamanho=15),
+        perfil.camada(726, 749, 291, 307),
+        texto(759, 304, "Solo acima do N.A.", tamanho=15),
+        perfil.camada(726, 749, 320, 336, "submerso"),
+        texto(759, 333, "Solo submerso", tamanho=15),
         perfil.rodape(),
         "</svg>",
     ))
