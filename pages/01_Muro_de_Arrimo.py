@@ -908,7 +908,7 @@ def _montar_esquema_referencia(
 def _mostrar_memoria_calculo(resultado_muro: dict[str, Any]) -> None:
     resumo = resultado_muro["resumo"]
     verificacoes = resultado_muro["verificacoes"]
-    with st.expander("2.3. Memória de cálculo e grandezas intermediárias"):
+    with st.expander("2.2. Memória de cálculo e grandezas intermediárias"):
         st.markdown("**Pressões laterais consideradas**")
         st.latex(r"\sigma'_v=\sum\gamma_{natural}\,\Delta z_{acima}+\sum(\gamma_{sat}-\gamma_w)\,\Delta z_{abaixo}")
         st.latex(r"p_{solo}=\max(0,\,K_a\sigma'_v-2c\sqrt{K_a})\qquad p_q=K_aq\qquad u=\gamma_w\max(0,z-z_{NA})")
@@ -1313,7 +1313,6 @@ else:
     resumo = resultado_muro["resumo"]
     verificacoes = resultado_muro["verificacoes"]
 
-    st.subheader("2. Resultados e verificações")
     _mostrar_graficos(resultado_muro, entradas_muro, camadas_solo)
 
     arquivo_dxf_muro = gerar_desenho_muro_dxf(
@@ -1332,7 +1331,7 @@ else:
         "para você poder conferir, ocultar ou editar no AutoCAD."
     )
 
-    with st.expander("2.1. Empuxos resultantes", expanded=True):
+    with st.expander("2. Empuxos resultantes", expanded=True):
         colunas_empuxos = st.columns(4)
         colunas_empuxos[0].metric(
             "Solo", f"{_formatar_numero(resumo['empuxo_solo_kN_m'])} kN/m"
@@ -1349,7 +1348,7 @@ else:
             f"e = {_formatar_numero(verificacoes['excentricidade_resultante_m'])} m",
         )
 
-    with st.expander("2.2. Pressões e empuxos por trecho", expanded=True):
+    with st.expander("2.1. Pressões e empuxos por trecho", expanded=True):
         _mostrar_tabela_trechos(resultado_muro["trechos"])
 
     _mostrar_memoria_calculo(resultado_muro)
@@ -1357,7 +1356,7 @@ else:
         "Limites desta fase: não inclui ruptura global, empuxo passivo à frente do muro "
         "ou dimensionamento estrutural do concreto armado."
     )
-    with st.expander("2.4. Memorial passo a passo · como fazer o cálculo à mão"):
+    with st.expander("2.3. Memorial passo a passo · como fazer o cálculo à mão"):
         st.markdown(
             montar_memorial_passo_a_passo_muro(
                 entradas_muro, camadas_solo, resultado_muro

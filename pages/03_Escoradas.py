@@ -210,7 +210,7 @@ aba_pressao, aba_fundo, aba_graux, aba_froehlich = st.tabs(
 )
 
 with aba_pressao:
-    st.subheader("1. Pressões aparentes e escoras")
+    st.subheader("1. Pressão aparente e carga por escora")
     download_pressao = st.container()
     croqui_pressao = st.empty()
     colunas_entrada = st.columns(3)
@@ -307,7 +307,6 @@ with aba_pressao:
             partial(gerar_dxf_pressao_aparente, entradas_pressao),
         )
         st.divider()
-        st.subheader("2. Cálculo da envoltória e da força por escora")
         colunas_resultados = st.columns(5)
         colunas_resultados[0].metric(
             "Pressão aparente máxima",
@@ -335,7 +334,7 @@ with aba_pressao:
             "A estimativa adota divisão igual da carga entre os níveis de escoras."
         )
 
-        with st.expander("2.1. Memória de cálculo da pressão aparente"):
+        with st.expander("2. Memória de cálculo da pressão aparente"):
             st.latex(r"K_a=\tan^2\left(45^\circ-\frac{\varphi}{2}\right)")
             if entradas_pressao["tipo_solo"] == MODELOS_ENVOLTORIA[0]:
                 st.latex(r"p_{max}=0{,}65(\gamma H+q)K_a \qquad E_{app}=p_{max}H")
@@ -376,7 +375,7 @@ with aba_pressao:
                     "O resultado segue a fórmula da planilha."
                 )
 
-        st.subheader("2.2. Envoltória de pressão aparente do solo")
+        st.subheader("2.1. Envoltória de pressão aparente do solo")
         st.caption("Este gráfico mostra somente a parcela do solo; a pressão da água aparece em separado abaixo.")
         _mostrar_grafico_pressao(
             resultado_pressao["diagrama_pressao_aparente"],
@@ -385,7 +384,7 @@ with aba_pressao:
             "#c34b3c",
             "rgba(195, 75, 60, 0.14)",
         )
-        st.subheader("2.3. Pressão hidrostática no trecho escavado")
+        st.subheader("2.2. Pressão hidrostática no trecho escavado")
         if resultado_pressao["diagrama_pressao_agua"]:
             st.caption("A distribuição triangular começa no nível d'água e termina no fundo da escavação.")
             _mostrar_grafico_pressao(

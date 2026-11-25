@@ -178,7 +178,7 @@ aba_balanco, aba_ancorada = st.tabs(
 )
 
 with aba_balanco:
-    st.subheader("1. Cortina em balanço — entradas do solo granular")
+    st.subheader("1. Entradas · solo granular homogêneo")
     download_balanco = st.container()
     croqui_balanco = st.empty()
     colunas_entrada_balanco = st.columns(3)
@@ -269,7 +269,7 @@ with aba_balanco:
         mostrar_memoria_cortina_em_balanco(resultado_balanco)
 
 with aba_ancorada:
-    st.subheader("4. Cortina ancorada — entradas e ficha conhecida")
+    st.subheader("4. Entradas · duas camadas e ficha conhecida")
     download_ancorada = st.container()
     croqui_ancorada = st.empty()
     colunas_entrada_ancorada = st.columns(3)

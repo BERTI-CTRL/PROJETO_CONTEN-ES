@@ -1283,7 +1283,7 @@ def _mostrar_diagnostico_circulo(circulo: dict[str, Any]) -> None:
 
 
 def _mostrar_memoria_calculo() -> None:
-    with st.expander("4.1. Guia de símbolos e equações"):
+    with st.expander("5. Guia de símbolos e equações"):
         st.markdown(
             "**Geometria:** H é a altura; H:V é a relação horizontal/vertical da face; "
             "β é a inclinação do terreno a montante; a é a distância da crista até a entrada; "
@@ -1719,9 +1719,7 @@ else:
         _mostrar_grafico_geometria(entradas_talude, resultado_talude, circulo_desenhado)
 
         bishop = circulo_desenhado["bishop"]
-        with st.expander(
-            f"3. Bishop Simplificado — círculo crítico · {circulo_desenhado['identificacao']}"
-        ):
+        with st.expander(f"3. Bishop Simplificado · {circulo_desenhado['identificacao']}"):
             st.write(f"**{bishop['situacao']}**")
             st.latex(
                 r"FS_{k+1}=\frac{\sum_i[c'_i b_i+(W_i-u_i b_i)\tan\varphi'_i]/m_{\alpha,i}}"
@@ -1732,26 +1730,9 @@ else:
             if bishop["historico"]:
                 st.dataframe(bishop["historico"], hide_index=True, width="stretch")
 
-    st.subheader("4. Fellenius e Bishop Simplificado — hipóteses, resultados e limitações")
-    _mostrar_memoria_calculo()
-    st.caption(
-        "Escopo: ruptura circular por Fellenius e Bishop Simplificado, N.A. horizontal e até duas camadas. "
-        "Superfícies não circulares, sismo, fluxo não hidrostático "
-        "e busca automática dos pontos de entrada e saída estão fora do escopo."
-    )
-    with st.expander("4.2. Memorial passo a passo — como fazer o cálculo à mão"):
-        st.markdown(
-            montar_memorial_passo_a_passo_talude(
-                entradas_talude, resultado_talude, circulo_desenhado
-            )
-        )
-
     if circulo_desenhado:
-        st.subheader(
-            f"5. Detalhamento geométrico e forças por fatia · {circulo_desenhado['identificacao']}"
-        )
         if circulo_desenhado["fatias"]:
-            st.subheader(f"5.1. Gráficos por fatia · {circulo_desenhado['identificacao']}")
+            st.subheader(f"4. Gráficos por fatia · {circulo_desenhado['identificacao']}")
             st.caption(
                 "Cada gráfico mostra uma parte do cálculo. Use o ícone de câmera ao passar o mouse "
                 "sobre qualquer gráfico para baixar sua imagem PNG."
@@ -1770,7 +1751,20 @@ else:
                 )
                 _mostrar_grafico_forcas_por_fatia(circulo_desenhado["fatias"])
 
-            st.subheader(f"5.2. Memória das fatias · {circulo_desenhado['identificacao']}")
+            st.subheader(f"4.1. Memória das fatias · {circulo_desenhado['identificacao']}")
             _mostrar_tabela_fatias(circulo_desenhado["fatias"])
         else:
             st.info("Este raio é menor que d/2; não existe círculo para dividir em fatias.")
+
+    _mostrar_memoria_calculo()
+    st.caption(
+        "Escopo: ruptura circular por Fellenius e Bishop Simplificado, N.A. horizontal e até duas camadas. "
+        "Superfícies não circulares, sismo, fluxo não hidrostático "
+        "e busca automática dos pontos de entrada e saída estão fora do escopo."
+    )
+    with st.expander("5.1. Memorial passo a passo · como fazer o cálculo à mão"):
+        st.markdown(
+            montar_memorial_passo_a_passo_talude(
+                entradas_talude, resultado_talude, circulo_desenhado
+            )
+        )
