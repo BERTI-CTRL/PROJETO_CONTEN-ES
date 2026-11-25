@@ -1,12 +1,9 @@
-# Calculos para prova
+# Cálculos para prova
 
-Abra a pagina pela navegacao do Streamlit:
+Os módulos desta pasta contêm cálculos didáticos de geotecnia. A página de
+interface correspondente foi retirada da navegação pública do Streamlit.
 
-```powershell
-uv run streamlit run app.py
-```
-
-A pagina `05_Calculos_para_prova.py` tem abas de formulario de equacoes,
+O conteúdo anteriormente apresentado nessa página reunia abas de formulário de equações,
 recalque imediato de sapata,
 regressao linear, polo do circulo de Mohr, varios circulos com envoltoria e
 trajetoria `p-q`, adensamento primario/secundario e `Ensaios e tensoes`.
