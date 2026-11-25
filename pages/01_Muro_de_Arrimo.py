@@ -88,6 +88,53 @@ def _restaurar_exemplo() -> None:
     _aplicar_dados_dos_widgets(_dados_padrao())
 
 
+def _preencher_seis_camadas_padrao() -> None:
+    entradas_exemplo, camadas_exemplo = carregar_exemplo_muro()
+    altura_muro_m = float(
+        st.session_state.get("altura_muro_m", entradas_exemplo["altura_muro_m"]) or 0.0
+    )
+    if altura_muro_m <= 0:
+        camadas = [
+            {campo: 0.0 for campo in CAMPOS_CAMADA}
+            for _ in range(QUANTIDADE_MAXIMA_CAMADAS)
+        ]
+    else:
+        espessura_padrao_m = round(
+            altura_muro_m / QUANTIDADE_MAXIMA_CAMADAS, 2
+        )
+        camadas = []
+        for indice in range(QUANTIDADE_MAXIMA_CAMADAS):
+            propriedades = deepcopy(camadas_exemplo[indice % len(camadas_exemplo)])
+            propriedades["espessura_m"] = (
+                altura_muro_m - espessura_padrao_m * (QUANTIDADE_MAXIMA_CAMADAS - 1)
+                if indice == QUANTIDADE_MAXIMA_CAMADAS - 1
+                else espessura_padrao_m
+            )
+            propriedades["espessura_m"] = round(propriedades["espessura_m"], 2)
+            camadas.append(propriedades)
+    for indice, camada in enumerate(camadas):
+        for campo in CAMPOS_CAMADA:
+            st.session_state[_chave_camada(indice, campo)] = camada[campo]
+
+
+def _limpar_para_uma_camada() -> None:
+    entradas_exemplo, camadas_exemplo = carregar_exemplo_muro()
+    altura_muro_m = float(
+        st.session_state.get("altura_muro_m", entradas_exemplo["altura_muro_m"]) or 0.0
+    )
+    primeira_camada = deepcopy(camadas_exemplo[0])
+    primeira_camada["espessura_m"] = altura_muro_m
+    if altura_muro_m <= 0:
+        primeira_camada = {campo: 0.0 for campo in CAMPOS_CAMADA}
+    camadas = [primeira_camada] + [
+        {campo: 0.0 for campo in CAMPOS_CAMADA}
+        for _ in range(QUANTIDADE_MAXIMA_CAMADAS - 1)
+    ]
+    for indice, camada in enumerate(camadas):
+        for campo in CAMPOS_CAMADA:
+            st.session_state[_chave_camada(indice, campo)] = camada[campo]
+
+
 def _capturar_dados_dos_widgets() -> dict[str, Any]:
     entradas = {campo: st.session_state.get(campo) for campo in CAMPOS_ENTRADA}
     camadas = [
@@ -127,6 +174,42 @@ def _mostrar_selo_status(coluna: Any, status: str) -> None:
         f'{simbolo}&nbsp; {status}</span>',
         unsafe_allow_html=True,
     )
+
+
+def _mostrar_resumo_principal(verificacoes: dict[str, Any]) -> None:
+    st.subheader("Resumo da estabilidade")
+    colunas_metricas = st.columns(4)
+    colunas_metricas[0].metric(
+        "FS contra tombamento",
+        _formatar_numero(verificacoes["fator_seguranca_tombamento"], 3),
+    )
+    _mostrar_selo_status(colunas_metricas[0], verificacoes["status_tombamento"])
+    colunas_metricas[1].metric(
+        "FS contra deslizamento",
+        _formatar_numero(verificacoes["fator_seguranca_deslizamento"], 3),
+    )
+    _mostrar_selo_status(colunas_metricas[1], verificacoes["status_deslizamento"])
+    colunas_metricas[2].metric(
+        "Tensão máxima na base",
+        f"{_formatar_numero(verificacoes['tensao_maxima_base_kPa'])} kPa",
+    )
+    _mostrar_selo_status(colunas_metricas[2], verificacoes["status_tensao_maxima_base"])
+    colunas_metricas[3].metric(
+        "Tensão mínima na base",
+        f"{_formatar_numero(verificacoes['tensao_minima_base_kPa'])} kPa",
+    )
+    _mostrar_selo_status(colunas_metricas[3], verificacoes["regime_pressao_base"])
+
+    todos_checks_atendem = (
+        verificacoes["status_tombamento"] == "ATENDE"
+        and verificacoes["status_deslizamento"] == "ATENDE"
+        and verificacoes["status_tensao_maxima_base"] == "ATENDE"
+        and verificacoes["regime_pressao_base"] != "FORA DA BASE"
+    )
+    if todos_checks_atendem:
+        st.success("O caso atende aos checks de estabilidade incluídos nesta fase.")
+    else:
+        st.error("Um ou mais checks não atendem ou estão bloqueados. Confira os limites e a memória de cálculo.")
 
 
 def _mostrar_graficos(
@@ -497,13 +580,108 @@ def _montar_esquema_referencia(
                     f"<br>φ={float(camada['angulo_atrito_graus']):.1f}° · c={float(camada['coesao_kPa']):.1f} kPa<extra></extra>"),
             ))
         y_meio_m = altura_muro_m - (topo_m + base_m) / 2
+        espessura_visivel_m = base_m - topo_m
+        if espessura_visivel_m < 0.45:
+            texto_camada = f"C{indice}"
+            tamanho_fonte_camada = 8
+        elif espessura_visivel_m < 1.1:
+            texto_camada = (
+                f"C{indice} · γ {float(camada['peso_especifico_natural_kN_m3']):.0f}"
+                f" · φ {float(camada['angulo_atrito_graus']):.0f}°"
+            )
+            tamanho_fonte_camada = 8
+        else:
+            texto_camada = (
+                f"CAMADA {indice}<br>γ={float(camada['peso_especifico_natural_kN_m3']):.1f}"
+                f" · φ={float(camada['angulo_atrito_graus']):.1f}°"
+            )
+            tamanho_fonte_camada = 9
         figura.add_annotation(
-            x=largura_base_m + extensao_solo_m * 0.5, y=y_meio_m,
-            text=(f"CAMADA {indice}<br>γ={float(camada['peso_especifico_natural_kN_m3']):.1f} kN/m³"
-                  f"<br>φ={float(camada['angulo_atrito_graus']):.1f}°"),
-            showarrow=False, font={"size": 12, "color": "#34434a"},
-            bgcolor="rgba(255,255,255,0.65)",
+            x=largura_base_m + extensao_solo_m * 0.74,
+            y=y_meio_m,
+            text=texto_camada,
+            showarrow=False,
+            font={"size": tamanho_fonte_camada, "color": "#34434a"},
+            bgcolor="rgba(255,255,255,0.78)",
+            bordercolor="rgba(91,108,113,0.5)",
+            borderwidth=0.5,
+            borderpad=2,
         )
+
+    trechos_pressao = resultado_muro.get("trechos", [])
+    pressao_total_por_trecho: list[tuple[float, float, float]] = []
+    for trecho in trechos_pressao:
+        pressao_superior_kPa = (
+            float(trecho["pressao_solo_superior_kPa"])
+            + float(trecho["pressao_sobrecarga_kPa"])
+            + float(trecho["pressao_agua_superior_kPa"])
+        )
+        pressao_inferior_kPa = (
+            float(trecho["pressao_solo_inferior_kPa"])
+            + float(trecho["pressao_sobrecarga_kPa"])
+            + float(trecho["pressao_agua_inferior_kPa"])
+        )
+        profundidade_meio_m = (
+            float(trecho["profundidade_superior_m"])
+            + float(trecho["profundidade_inferior_m"])
+        ) / 2
+        pressao_meio_kPa = max(0.0, (pressao_superior_kPa + pressao_inferior_kPa) / 2)
+        pressao_total_por_trecho.append(
+            (
+                profundidade_meio_m,
+                pressao_meio_kPa,
+                max(pressao_superior_kPa, pressao_inferior_kPa),
+            )
+        )
+
+    pressao_maxima_kPa = max(
+        (item[2] for item in pressao_total_por_trecho), default=0.0
+    )
+    if pressao_maxima_kPa > 0:
+        comprimento_maximo_seta_m = min(0.62, extensao_solo_m * 0.28)
+        x_ponta_seta_m = largura_base_m + 0.08
+        x_linhas_pressao: list[float | None] = []
+        y_linhas_pressao: list[float | None] = []
+        x_pontas_pressao: list[float] = []
+        y_pontas_pressao: list[float] = []
+        dados_hover_pressao: list[list[float]] = []
+        for (
+            profundidade_m,
+            pressao_meio_kPa,
+            pressao_referencia_kPa,
+        ) in pressao_total_por_trecho:
+            cota_m = altura_muro_m - profundidade_m
+            fracao_pressao = pressao_referencia_kPa / pressao_maxima_kPa
+            x_cauda_seta_m = (
+                x_ponta_seta_m
+                + 0.12
+                + comprimento_maximo_seta_m * fracao_pressao
+            )
+            x_linhas_pressao.extend((x_cauda_seta_m, x_ponta_seta_m, None))
+            y_linhas_pressao.extend((cota_m, cota_m, None))
+            x_pontas_pressao.append(x_ponta_seta_m)
+            y_pontas_pressao.append(cota_m)
+            dados_hover_pressao.append([profundidade_m, pressao_meio_kPa])
+        figura.add_trace(go.Scatter(
+            x=x_linhas_pressao,
+            y=y_linhas_pressao,
+            mode="lines",
+            line={"color": "#bd5146", "width": 2},
+            hoverinfo="skip",
+            showlegend=False,
+        ))
+        figura.add_trace(go.Scatter(
+            x=x_pontas_pressao,
+            y=y_pontas_pressao,
+            mode="markers",
+            marker={"symbol": "triangle-left", "size": 8, "color": "#bd5146"},
+            customdata=dados_hover_pressao,
+            hovertemplate=(
+                "Pressão lateral total<br>z = %{customdata[0]:.2f} m"
+                "<br>pₕ ≈ %{customdata[1]:.2f} kPa<extra></extra>"
+            ),
+            showlegend=False,
+        ))
 
     figura.add_trace(go.Scatter(
         x=[p["x_m"] for p in resultado_muro["geometria_muro"]],
@@ -611,17 +789,32 @@ def _montar_esquema_referencia(
         ay=-32,
         font={"size": 11, "color": "#17374c"},
     )
+    x_cota_altura_m = -0.34
+    figura.add_shape(
+        type="line",
+        x0=x_cota_altura_m,
+        x1=x_cota_altura_m,
+        y0=0,
+        y1=altura_muro_m,
+        line={"color": "#17374c", "width": 1.5},
+    )
+    for cota_extremo_m in (0.0, altura_muro_m):
+        figura.add_shape(
+            type="line",
+            x0=x_cota_altura_m - 0.09,
+            x1=x_cota_altura_m + 0.09,
+            y0=cota_extremo_m,
+            y1=cota_extremo_m,
+            line={"color": "#17374c", "width": 1.5},
+        )
     figura.add_annotation(
-        x=0,
+        x=x_cota_altura_m - 0.12,
         y=altura_muro_m / 2,
         text=f"H = {altura_muro_m:.2f} m",
         textangle=-90,
-        showarrow=True,
-        arrowhead=2,
-        arrowcolor="#17374c",
-        ax=-34,
-        ay=0,
-        font={"size": 12, "color": "#17374c"},
+        showarrow=False,
+        font={"size": 11, "color": "#17374c"},
+        bgcolor="rgba(251,252,253,0.85)",
     )
     figura.add_annotation(x=largura_base_m + extensao_solo_m / 2, y=-0.55,
         text=f"f = {float(entradas_muro['coeficiente_atrito_base']):.2f}  ·  qadm = {float(entradas_muro['tensao_admissivel_fundacao_kPa']):.0f} kPa",
@@ -878,6 +1071,10 @@ with st.container(border=True):
                 theme=None,
                 config={"displayModeBar": False, "responsive": True},
             )
+            st.caption(
+                "As setas vermelhas mostram a pressão lateral total sobre o muro; "
+                "passe o cursor para ver profundidade e pressão aproximada."
+            )
         with coluna_simbolos:
             st.markdown("**Referências do croqui**")
             st.markdown(
@@ -903,6 +1100,10 @@ with st.container(border=True):
     else:
         st.info("O croqui aparece quando os campos formarem uma geometria e um perfil de solo válidos.")
 
+    if resultado_croqui is not None:
+        st.divider()
+        _mostrar_resumo_principal(resultado_croqui["verificacoes"])
+
     coluna_geometria, coluna_acoes, coluna_fundacao = st.columns(3)
     with coluna_geometria:
         st.number_input("Altura do muro, H (m)", min_value=0.0, step=0.10, key="altura_muro_m")
@@ -923,6 +1124,14 @@ with st.container(border=True):
             max_value=89.9,
             step=1.0,
             key="inclinacao_aterro_graus",
+            help=(
+                "β define uma única superfície do aterro. Em Rankine, o Kₐ é calculado "
+                "com o φ de cada camada; exige c = 0 e β < φ em todas as camadas."
+            ),
+        )
+        st.caption(
+            "β vale para todo o perfil; Rankine calcula Kₐ com o φ de cada camada. "
+            "Para Coulomb, este modelo ainda requer uma camada."
         )
         st.number_input(
             "Atrito solo–muro, δ (°)",
@@ -978,6 +1187,32 @@ with st.container(border=True):
         "Preencha as camadas em sequência, do topo para baixo. Deixe as que não usar zeradas; "
         "a soma das espessuras deve ser igual à altura do muro."
     )
+    coluna_seis_camadas, coluna_uma_camada, coluna_dica_camadas = st.columns(
+        [1.15, 1.2, 2.2], vertical_alignment="center"
+    )
+    with coluna_seis_camadas:
+        st.button(
+            "Preencher 6 camadas padrão",
+            on_click=_preencher_seis_camadas_padrao,
+            use_container_width=True,
+            key="preencher_seis_camadas_muro",
+            help=(
+                "Divide a altura do muro igualmente entre seis camadas e alterna os dois "
+                "perfis de solo do exemplo da planilha."
+            ),
+        )
+    with coluna_uma_camada:
+        st.button(
+            "Manter somente 1 camada",
+            on_click=_limpar_para_uma_camada,
+            use_container_width=True,
+            key="limpar_camadas_muro",
+            help="Atribui toda a altura à Camada 1 e zera as Camadas 2 a 6.",
+        )
+    with coluna_dica_camadas:
+        st.caption(
+            "Os valores-padrão são editáveis; a altura total continua igual a H."
+        )
     for indice_camada in range(QUANTIDADE_MAXIMA_CAMADAS):
         with st.expander(f"Camada {indice_camada + 1}", expanded=(indice_camada == 0)):
             colunas_camadas = st.columns(5)
@@ -1012,40 +1247,6 @@ else:
     resultado_muro = resultado_croqui or calcular_muro(entradas_muro, camadas_solo)
     resumo = resultado_muro["resumo"]
     verificacoes = resultado_muro["verificacoes"]
-    st.divider()
-    st.subheader("Resultados principais")
-    colunas_metricas = st.columns(4)
-    colunas_metricas[0].metric(
-        "FS contra tombamento",
-        _formatar_numero(verificacoes["fator_seguranca_tombamento"], 3),
-    )
-    _mostrar_selo_status(colunas_metricas[0], verificacoes["status_tombamento"])
-    colunas_metricas[1].metric(
-        "FS contra deslizamento",
-        _formatar_numero(verificacoes["fator_seguranca_deslizamento"], 3),
-    )
-    _mostrar_selo_status(colunas_metricas[1], verificacoes["status_deslizamento"])
-    colunas_metricas[2].metric(
-        "Tensão máxima na base",
-        f"{_formatar_numero(verificacoes['tensao_maxima_base_kPa'])} kPa",
-    )
-    _mostrar_selo_status(colunas_metricas[2], verificacoes["status_tensao_maxima_base"])
-    colunas_metricas[3].metric(
-        "Tensão mínima na base",
-        f"{_formatar_numero(verificacoes['tensao_minima_base_kPa'])} kPa",
-    )
-    _mostrar_selo_status(colunas_metricas[3], verificacoes["regime_pressao_base"])
-
-    todos_checks_atendem = (
-        verificacoes["status_tombamento"] == "ATENDE"
-        and verificacoes["status_deslizamento"] == "ATENDE"
-        and verificacoes["status_tensao_maxima_base"] == "ATENDE"
-        and verificacoes["regime_pressao_base"] != "FORA DA BASE"
-    )
-    if todos_checks_atendem:
-        st.success("O caso atende aos checks de estabilidade incluídos nesta fase.")
-    else:
-        st.error("Um ou mais checks não atendem ou estão bloqueados. Confira os limites e a memória de cálculo.")
 
     _mostrar_graficos(resultado_muro, entradas_muro, camadas_solo)
 

@@ -172,12 +172,16 @@ def validar_entradas_muro(
             if abs(atrito_solo_muro_graus) > 1e-12:
                 erros.append("Para Rankine, o atrito solo–muro deve ser igual a zero.")
             if abs(inclinacao_aterro_graus) > 1e-12:
-                if len(camadas_validas) != 1:
-                    erros.append("Rankine com aterro inclinado está limitado a uma camada de solo.")
-                elif camadas_validas[0]["coesao_kPa"] != 0:
-                    erros.append("Rankine com aterro inclinado exige coesão igual a zero.")
-                elif inclinacao_aterro_graus >= camadas_validas[0]["angulo_atrito_graus"]:
-                    erros.append("Para Rankine com aterro inclinado, β deve ser menor que φ.")
+                for indice_camada, camada in enumerate(camadas_validas, start=1):
+                    if camada["coesao_kPa"] != 0:
+                        erros.append(
+                            f"Rankine com aterro inclinado exige c = 0 na Camada {indice_camada}."
+                        )
+                    if inclinacao_aterro_graus >= camada["angulo_atrito_graus"]:
+                        erros.append(
+                            f"Para Rankine com aterro inclinado, β deve ser menor que φ "
+                            f"na Camada {indice_camada}."
+                        )
         elif len(camadas_validas) == 1:
             camada_unica = camadas_validas[0]
             if camada_unica["coesao_kPa"] != 0:
