@@ -12,6 +12,11 @@ from contencoes.cad.exportar_estaca_prancha_dxf import (
     gerar_dxf_cortina_em_balanco,
     gerar_dxf_cortina_ancorada,
 )
+from contencoes.relatorios.gerar_relatorio_estaca_prancha import (
+    ErroGeracaoRelatorioEstacaPrancha,
+    compilar_relatorio_estaca_prancha_pdf,
+    montar_relatorio_estaca_prancha_tex,
+)
 from contencoes.calculos.calculos_estaca_prancha import (
     calcular_cortina_ancorada,
     calcular_cortina_em_balanco,
@@ -30,8 +35,6 @@ from contencoes.visualizacao.visualizacao_estaca_prancha import (
     mostrar_diagrama_pressao_cortina_ancorada,
     mostrar_memoria_cortina_ancorada,
 )
-
-from contencoes.visualizacao.download_corte_dxf import mostrar_download_corte
 
 
 st.set_page_config(page_title="Estaca-prancha | Contenções", page_icon="📐", layout="wide")
@@ -108,6 +111,105 @@ def _capturar_dados_dos_widgets() -> dict[str, dict[str, Any]]:
             for nome_campo in campos_caso
         }
     return dados
+
+
+def _mostrar_botao_documentos_desabilitado(painel: Any, nome_caso: str) -> None:
+    """Mantem o comando no topo da aba enquanto os dados forem invalidos."""
+    with painel.container():
+        st.button(
+            "Gerar CAD e relatório",
+            type="primary",
+            use_container_width=True,
+            disabled=True,
+            key=f"gerar_documentos_estaca_{nome_caso}",
+        )
+        st.caption("Corrija os dados indicados abaixo para liberar os arquivos.")
+
+
+def _mostrar_documentos_cortina(
+    painel: Any,
+    nome_caso: str,
+    tipo_cortina: str,
+    entradas: dict[str, Any],
+    resultado: dict[str, Any],
+    gerar_dxf: Any,
+) -> None:
+    """Prepara e oferece o CAD, o PDF e a fonte TeX dos valores atuais."""
+    assinatura = json.dumps(entradas, sort_keys=True, ensure_ascii=False)
+    chave_pacote = f"pacote_documentos_estaca_{nome_caso}"
+    pacote = st.session_state.get(chave_pacote)
+    if isinstance(pacote, dict) and pacote.get("assinatura") != assinatura:
+        st.session_state.pop(chave_pacote, None)
+        pacote = None
+
+    with painel.container():
+        clicou_gerar = st.button(
+            "Gerar CAD e relatório",
+            type="primary",
+            use_container_width=True,
+            key=f"gerar_documentos_estaca_{nome_caso}",
+            help="Prepara o desenho DXF, o relatório didático em PDF e a fonte LaTeX.",
+        )
+        if clicou_gerar:
+            with st.spinner("Preparando o CAD e o relatório didático..."):
+                arquivo_dxf = gerar_dxf()
+                fonte_tex = montar_relatorio_estaca_prancha_tex(
+                    entradas, resultado, tipo_cortina
+                ).encode("utf-8")
+                erro_pdf = None
+                try:
+                    arquivo_pdf = compilar_relatorio_estaca_prancha_pdf(
+                        fonte_tex.decode("utf-8")
+                    )
+                except ErroGeracaoRelatorioEstacaPrancha as erro:
+                    arquivo_pdf = None
+                    erro_pdf = str(erro)
+                pacote = {
+                    "assinatura": assinatura,
+                    "dxf": arquivo_dxf,
+                    "pdf": arquivo_pdf,
+                    "tex": fonte_tex,
+                    "erro_pdf": erro_pdf,
+                }
+                st.session_state[chave_pacote] = pacote
+
+        if not isinstance(pacote, dict):
+            return
+
+        st.success("Arquivos preparados com os valores atuais desta cortina.")
+        colunas_download = st.columns(3)
+        colunas_download[0].download_button(
+            "Baixar CAD (.dxf)",
+            data=pacote["dxf"],
+            file_name=f"{nome_caso}.dxf",
+            mime="application/dxf",
+            key=f"baixar_dxf_estaca_{nome_caso}",
+            use_container_width=True,
+        )
+        if pacote["pdf"] is not None:
+            colunas_download[1].download_button(
+                "Baixar relatório didático (.pdf)",
+                data=pacote["pdf"],
+                file_name=f"memorial_didatico_{nome_caso}.pdf",
+                mime="application/pdf",
+                key=f"baixar_pdf_estaca_{nome_caso}",
+                use_container_width=True,
+            )
+        else:
+            colunas_download[1].warning(
+                "O PDF não compilou neste servidor; baixe a fonte .tex para compilar localmente."
+            )
+        colunas_download[2].download_button(
+            "Baixar fonte LaTeX (.tex)",
+            data=pacote["tex"],
+            file_name=f"memorial_didatico_{nome_caso}.tex",
+            mime="application/x-tex",
+            key=f"baixar_tex_estaca_{nome_caso}",
+            use_container_width=True,
+        )
+        if pacote.get("erro_pdf"):
+            with st.expander("Detalhes da compilação do PDF"):
+                st.code(pacote["erro_pdf"], language="text")
 
 
 armazenamento_local = LocalStorage(key="armazenamento_contencoes")
@@ -226,7 +328,7 @@ with aba_balanco:
     }
     erros_balanco = validar_entradas_cortina_em_balanco(entradas_balanco)
     if erros_balanco:
-        mostrar_download_corte(download_balanco, "cortina_em_balanco")
+        _mostrar_botao_documentos_desabilitado(download_balanco, "cortina_em_balanco")
         st.error("Revise os dados antes de consultar a ficha.")
         for erro in erros_balanco:
             st.markdown(f"- {erro}")
@@ -236,8 +338,12 @@ with aba_balanco:
             gerar_svg_cortina_em_balanco(entradas_balanco, resultado_balanco),
             unsafe_allow_html=True,
         )
-        mostrar_download_corte(
-            download_balanco, "cortina_em_balanco",
+        _mostrar_documentos_cortina(
+            download_balanco,
+            "cortina_em_balanco",
+            "cortina_em_balanco",
+            entradas_balanco,
+            resultado_balanco,
             partial(gerar_dxf_cortina_em_balanco, entradas_balanco, resultado_balanco),
         )
         st.divider()
@@ -356,7 +462,7 @@ with aba_ancorada:
     }
     erros_ancorada = validar_entradas_cortina_ancorada(entradas_ancorada)
     if erros_ancorada:
-        mostrar_download_corte(download_ancorada, "cortina_ancorada")
+        _mostrar_botao_documentos_desabilitado(download_ancorada, "cortina_ancorada")
         st.error("Revise os dados antes de consultar os resultados.")
         for erro in erros_ancorada:
             st.markdown(f"- {erro}")
@@ -366,8 +472,12 @@ with aba_ancorada:
             gerar_svg_cortina_ancorada(entradas_ancorada, resultado_ancorada),
             unsafe_allow_html=True,
         )
-        mostrar_download_corte(
-            download_ancorada, "cortina_ancorada",
+        _mostrar_documentos_cortina(
+            download_ancorada,
+            "cortina_ancorada",
+            "cortina_ancorada",
+            entradas_ancorada,
+            resultado_ancorada,
             partial(gerar_dxf_cortina_ancorada, entradas_ancorada, resultado_ancorada),
         )
         st.divider()

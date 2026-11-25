@@ -1,0 +1,173 @@
+\documentclass[11pt,a4paper,oneside]{report}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[brazilian]{babel}
+\usepackage{lmodern}
+\usepackage[a4paper,margin=2.15cm,headheight=15pt]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs,tabularx,array}
+\usepackage{xcolor,tikz,graphicx}
+\usetikzlibrary{arrows.meta,calc,patterns,positioning}
+\usepackage{tcolorbox}
+\setlength{\parskip}{5pt}
+\setlength{\parindent}{0pt}
+\pagestyle{plain}
+\definecolor{azul}{HTML}{1F5A7A}
+\definecolor{verde}{HTML}{176452}
+\definecolor{areia}{HTML}{F6F0E4}
+\definecolor{laranja}{HTML}{E59B36}
+\definecolor{azulagua}{HTML}{2185A6}
+\definecolor{azulclaro}{HTML}{EAF4F8}
+\definecolor{verdeclaro}{HTML}{EAF5EF}
+\definecolor{vermelhoclaro}{HTML}{FCEEEE}
+\definecolor{marrom}{HTML}{8A5A32}
+\definecolor{vermelho}{HTML}{B9493C}
+\definecolor{verdeagua}{HTML}{18757E}
+\newtcolorbox{conceito}[1][]{colback=azulclaro,colframe=azul!70!black,title=Ideia principal,fonttitle=\bfseries,#1}
+\newtcolorbox{resultado}[1][]{colback=verdeclaro,colframe=verde,title=Resultado do modelo,fonttitle=\bfseries,#1}
+\newtcolorbox{limite}[1][]{colback=vermelhoclaro,colframe=red!65!black,title=Hipóteses e limites,fonttitle=\bfseries,#1}
+\newtcolorbox{passo}[1][]{colback=white,colframe=azul!35!black,title=#1,fonttitle=\bfseries}
+\newsavebox{\caixaFormula}
+\newcommand{\exibirformula}[1]{\sbox{\caixaFormula}{$\displaystyle #1$}\ifdim\wd\caixaFormula>\linewidth\resizebox{\linewidth}{!}{\usebox{\caixaFormula}}\else\usebox{\caixaFormula}\fi}
+
+\begin{document}
+\begin{titlepage}
+\centering
+\vspace*{1.1cm}
+{\Large\color{azul}\bfseries PROJETO CONTENÇÕES}\par
+\vspace{1.1cm}
+{\Huge\bfseries Memorial didático de cálculo}\par
+\vspace{.3cm}
+{\LARGE Estaca-prancha · {{ caso }}}\par
+\vspace{.45cm}
+{\large {{ subtitulo }}}\par
+\vspace{1.0cm}
+\begin{tcolorbox}[width=.92\textwidth,colback=areia,colframe=azul!60!black,arc=2mm]
+\centering
+{\Large\bfseries {{ nome_projeto }}}\par
+\vspace{.45cm}
+{{ resumo_capa }}\par
+\vspace{.35cm}
+\begin{tabularx}{.96\textwidth}{*{3}{>{\centering\arraybackslash}X}}
+{% for destaque in destaques %}
+\begin{minipage}[c]{\linewidth}\centering
+\textbf{ {{ destaque.rotulo }} }\\ {\large {{ destaque.valor }}}
+\end{minipage}{% if not loop.last %} & {% endif %}
+{% endfor %}
+\\
+\end{tabularx}
+\vspace{.35cm}
+\textit{Gerado em {{ data_relatorio }} a partir das entradas e dos resultados do aplicativo.}
+\end{tcolorbox}
+\vfill
+\begin{tikzpicture}[node distance=.75cm,>=Stealth,every node/.style={font=\small,align=center}]
+\node[draw,rounded corners,fill=azulclaro,minimum width=3.4cm,minimum height=.85cm] (dados) {1. Entradas e geometria};
+\node[draw,rounded corners,fill=areia,minimum width=3.4cm,minimum height=.85cm,right=of dados] (pressao) {2. Pressões e empuxos};
+\node[draw,rounded corners,fill=verdeclaro,minimum width=3.4cm,minimum height=.85cm,right=of pressao] (equilibrio) {3. Equilíbrio e verificação};
+\draw[->,thick] (dados)--(pressao);
+\draw[->,thick] (pressao)--(equilibrio);
+\end{tikzpicture}
+\vspace{.7cm}
+\end{titlepage}
+
+\pagenumbering{roman}
+\setcounter{tocdepth}{0}
+\tableofcontents
+\clearpage
+\pagenumbering{arabic}
+
+\chapter{Entradas e interpretação do caso}
+Este memorial registra os dados informados na aba {{ caso }} e explica como eles entram no modelo. Os resultados foram calculados pelo aplicativo; as expressões abaixo mostram o caminho usado para obtê-los, sem substituir a conferência do projeto.
+
+\begin{conceito}
+{{ explicacao_modelo }}
+\end{conceito}
+
+\begin{tabularx}{\textwidth}{>{\bfseries}p{.56\textwidth} X}
+\toprule
+Entrada & Valor informado \\
+\midrule
+{% for entrada in entradas %}
+{{ entrada.rotulo }} & {{ entrada.valor }} \\
+{% endfor %}
+\bottomrule
+\end{tabularx}
+
+\chapter{Perfil da cortina}
+O perfil abaixo identifica a escavação, a ponta, as cotas principais e os elementos de cada caso. As dimensões variam com as entradas atuais.
+
+\begin{center}
+\resizebox{.78\textwidth}{!}{
+{{ croqui_tikz }}
+}
+\end{center}
+\begin{center}
+\small Esquema geométrico cotado do caso analisado.
+\end{center}
+
+\chapter{Diagrama de pressões}
+As pressões são desenhadas por profundidade. A pressão ativa e a água diferencial aparecem no sentido positivo; o passivo mobilizado aparece no lado oposto da cortina.
+
+\begin{center}
+\resizebox{.66\textwidth}{!}{
+{{ pressao_tikz }}
+}
+\end{center}
+\begin{center}
+{% for item in legenda_pressao %}
+\textcolor{ {{- item.cor|trim -}} }{$\blacksquare$} {{ item.nome }}{% if not loop.last %}\hspace{1em}{% endif %}
+{% endfor %}
+\end{center}
+
+\chapter{Memória do cálculo}
+{% for bloco in blocos_calculo %}
+\begin{passo}[{{ bloco.titulo }}]
+{{ bloco.explicacao }}
+{% for equacao in bloco.equacoes %}
+\begin{center}
+\exibirformula{ {{ equacao }} }
+\end{center}
+{% endfor %}
+\end{passo}
+{% endfor %}
+
+{% for tabela in tabelas %}
+\section{ {{ tabela.titulo }} }
+\begin{center}
+\begin{tabularx}{\textwidth}{ {{ tabela.formato }} }
+\toprule
+{% for coluna in tabela.colunas %}\textbf{ {{ coluna }} }{% if not loop.last %} & {% endif %}{% endfor %} \\
+\midrule
+{% for linha in tabela.linhas %}
+{% for celula in linha %}{{ celula }}{% if not loop.last %} & {% endif %}{% endfor %} \\
+{% endfor %}
+\bottomrule
+\end{tabularx}
+\end{center}
+{% endfor %}
+
+\chapter{Resultado e limites de uso}
+\begin{resultado}
+{{ interpretacao_resultado }}
+{% if status is defined %}
+\par\textbf{Condição calculada:} {{ status }}.
+{% endif %}
+\end{resultado}
+
+{% if avisos %}
+\section{Avisos deste cálculo}
+\begin{itemize}
+{% for aviso in avisos %}\item {{ aviso }}
+{% endfor %}
+\end{itemize}
+{% endif %}
+
+\begin{limite}
+O relatório é material didático para acompanhar os cálculos da ferramenta. Ele não substitui investigação geotécnica, avaliação profissional nem dimensionamento de projeto executivo. As hipóteses consideradas nesta versão são:
+\begin{itemize}
+{% for hipotese in hipoteses %}\item {{ hipotese }}
+{% endfor %}
+\end{itemize}
+\end{limite}
+
+\end{document}

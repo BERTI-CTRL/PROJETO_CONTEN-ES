@@ -36,3 +36,11 @@ Bishop Simplificado, inclui o croqui cotado, compara os círculos candidatos,
 mostra a sequência de iterações de Bishop e apresenta as geometrias e forças
 de cada fatia. Se o compilador PDF não estiver disponível, a fonte `.tex`
 permanece disponível para download.
+
+## Estaca-prancha
+
+Cada caso da página (cortina em balanço ou ancorada) prepara seu próprio DXF,
+relatório PDF didático e fonte LaTeX/TikZ com os valores atuais. Os relatórios
+incluem entradas, perfil cotado, diagrama de pressões, memória do cálculo e
+limites do modelo. Se o servidor não tiver um compilador LaTeX, a fonte `.tex`
+continua disponível para compilação local.
