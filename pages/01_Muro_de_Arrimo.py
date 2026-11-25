@@ -481,53 +481,28 @@ def _mostrar_graficos(
         linecolor="#82949d",
     )
 
-    figura_pressao = go.Figure()
-    estilos_diagrama = (
-        ("solo", "Solo", "#176452", "dash"),
-        ("sobrecarga", "Sobrecarga", "#d99028", "dot"),
-        ("agua", "Água", "#3e8dc1", "dash"),
-        ("total", "Total", "#17374c", "solid"),
-    )
-    for chave, nome, cor, estilo in estilos_diagrama:
-        pontos = resultado_muro["diagramas_pressao"][chave]
-        figura_pressao.add_trace(
-            go.Scatter(
-                x=[ponto["pressao_kPa"] for ponto in pontos],
-                y=[ponto["profundidade_m"] for ponto in pontos],
-                mode="lines",
-                line={"color": cor, "width": 3 if chave == "total" else 2, "dash": estilo},
-                name=nome,
-            )
-        )
-    figura_pressao.update_layout(
-        title="Pressões atrás do muro",
-        height=430,
-        margin={"l": 18, "r": 18, "t": 55, "b": 30},
-        xaxis_title="Pressão horizontal (kPa)",
-        yaxis_title="Profundidade a partir do topo (m)",
-        legend={"orientation": "h", "y": -0.24},
-        paper_bgcolor="white",
-        plot_bgcolor="white",
-    )
-    figura_pressao.update_yaxes(range=[altura_muro_m, 0], zeroline=False)
-    figura_pressao.update_xaxes(rangemode="tozero", zeroline=True, zerolinecolor="#9ba9ac")
-
     st.markdown(
-        "**Seção esquemática** · Muro à esquerda; tardoz, aterro e camadas à direita. "
-        "As setas indicam a sobrecarga uniforme."
+        "**Perfil e pressões laterais** · As camadas ficam no perfil à esquerda; "
+        "as curvas em kPa aparecem no painel à direita, alinhadas pela cota."
     )
     st.plotly_chart(
-        _montar_esquema_referencia(resultado_muro, entradas_muro, camadas_solo),
+        _montar_esquema_referencia(
+            resultado_muro,
+            entradas_muro,
+            camadas_solo,
+            incluir_diagrama_pressao=True,
+        ),
         width="stretch",
         theme=None,
+        config={"displayModeBar": False, "responsive": True},
     )
-    st.plotly_chart(figura_pressao, width="stretch", theme=None)
 
 
 def _montar_esquema_referencia(
     resultado_muro: dict[str, Any],
     entradas_muro: dict[str, Any],
     camadas_solo: list[dict[str, Any]],
+    incluir_diagrama_pressao: bool = False,
 ) -> go.Figure:
     """Desenha a seção no padrão da referência: muro à esquerda e solo à direita."""
     altura_muro_m = float(entradas_muro["altura_muro_m"])
@@ -822,11 +797,101 @@ def _montar_esquema_referencia(
     figura.add_annotation(x=largura_base_m * 0.48, y=altura_muro_m * 0.48,
         text=f"MURO DE CONCRETO<br>γc = {float(entradas_muro['peso_especifico_concreto_kN_m3']):.1f} kN/m³",
         showarrow=False, font={"size": 12, "color": "#303a3c"})
+
+    xaxis_perfil = {
+        "range": [-0.8, x_limite_solo_m + 0.5],
+        "title": "Seção transversal (m)",
+        "showgrid": False,
+        "zeroline": False,
+    }
+    layout_pressao: dict[str, Any] = {"showlegend": False}
+    if incluir_diagrama_pressao:
+        cores_pressao = {
+            "solo": ("Solo", "#176452", "dash"),
+            "sobrecarga": ("Sobrecarga", "#d99028", "dot"),
+            "agua": ("Água", "#3e8dc1", "dash"),
+            "total": ("Total", "#17374c", "solid"),
+        }
+        pontos_total = resultado_muro["diagramas_pressao"]["total"]
+        pressao_maxima_kPa = max(
+            (float(ponto["pressao_kPa"]) for ponto in pontos_total),
+            default=0.0,
+        )
+        for chave, (nome, cor, estilo) in cores_pressao.items():
+            pontos = resultado_muro["diagramas_pressao"][chave]
+            figura.add_trace(
+                go.Scatter(
+                    x=[float(ponto["pressao_kPa"]) for ponto in pontos],
+                    y=[altura_muro_m - float(ponto["profundidade_m"]) for ponto in pontos],
+                    xaxis="x2",
+                    yaxis="y",
+                    mode="lines",
+                    line={
+                        "color": cor,
+                        "width": 3 if chave == "total" else 2,
+                        "dash": estilo,
+                    },
+                    name=nome,
+                    hovertemplate=(
+                        f"{nome}<br>p = %{{x:.2f}} kPa"
+                        "<br>cota = %{y:.2f} m<extra></extra>"
+                    ),
+                )
+            )
+        xaxis_perfil["domain"] = [0.0, 0.68]
+        layout_pressao = {
+            "showlegend": True,
+            "legend": {
+                "x": 0.75,
+                "y": 1.10,
+                "xanchor": "left",
+                "yanchor": "top",
+                "orientation": "v",
+                "font": {"size": 8},
+                "bgcolor": "rgba(251,252,253,0.88)",
+                "borderwidth": 0,
+            },
+            "xaxis2": {
+                "domain": [0.75, 1.0],
+                "anchor": "y",
+                "side": "bottom",
+                "range": [0.0, pressao_maxima_kPa * 1.12 if pressao_maxima_kPa > 0 else 1.0],
+                "title": {"text": "Pressão horizontal (kPa)", "font": {"size": 10}},
+                "showgrid": True,
+                "gridcolor": "#e3e9ec",
+                "zeroline": True,
+                "zerolinecolor": "#9ba9ac",
+                "tickfont": {"size": 9},
+                "automargin": True,
+            },
+        }
+        figura.add_shape(
+            type="line",
+            xref="paper",
+            yref="paper",
+            x0=0.715,
+            x1=0.715,
+            y0=0,
+            y1=1,
+            line={"color": "#c8d2d6", "width": 1, "dash": "dot"},
+        )
+        if pressao_maxima_kPa <= 1e-12:
+            figura.add_annotation(
+                x=0.5,
+                y=altura_muro_m * 0.5,
+                xref="x2",
+                yref="y",
+                text="Pressão total nula",
+                showarrow=False,
+                font={"size": 10, "color": "#596a70"},
+                bgcolor="rgba(255,255,255,0.9)",
+            )
+
     figura.update_layout(
         title={"text": "SEÇÃO ESQUEMÁTICA · MURO DE ARRIMO", "x": 0.03},
         height=560, margin={"l": 70, "r": 35, "t": 70, "b": 55},
         paper_bgcolor="#fbfcfd", plot_bgcolor="#fbfcfd",
-        xaxis={"range": [-0.8, x_limite_solo_m + 0.5], "title": "Seção transversal (m)", "showgrid": False, "zeroline": False},
+        xaxis=xaxis_perfil,
         yaxis={
             "range": [-0.9, cota_superficie_lateral_m + 1.8],
             "title": "Cota (m)",
@@ -835,7 +900,7 @@ def _montar_esquema_referencia(
             "automargin": True,
         },
         autosize=True,
-        showlegend=False,
+        **layout_pressao,
     )
     return figura
 
