@@ -1,0 +1,244 @@
+\documentclass[11pt,a4paper,oneside]{report}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[brazilian]{babel}
+\usepackage{lmodern,microtype}
+\usepackage[a4paper,margin=2.1cm,headheight=15pt]{geometry}
+\usepackage{amsmath,amssymb,mathtools}
+\usepackage{booktabs,tabularx,longtable,array}
+\usepackage{xcolor,tikz}
+\usetikzlibrary{arrows.meta,calc,patterns,positioning}
+\usepackage{textcomp,tcolorbox}
+\tcbuselibrary{skins,breakable}
+\usepackage{fancyhdr,enumitem,hyperref}
+\hypersetup{colorlinks=true,linkcolor=blue!45!black,urlcolor=blue!45!black,pdftitle={Memorial didático de estabilidade de taludes},pdfauthor={Projeto Contenções}}
+\setlength{\parskip}{5pt}
+\setlength{\parindent}{0pt}
+\setlist[itemize]{leftmargin=1.5em,itemsep=2pt,topsep=3pt}
+\pagestyle{fancy}
+\fancyhf{}
+\lhead{Projeto Contenções · Estabilidade de taludes}
+\rhead{Memorial didático}
+\cfoot{\thepage}
+\definecolor{azul}{HTML}{1F5A7A}
+\definecolor{verde}{HTML}{176452}
+\definecolor{areia}{HTML}{F6F0E4}
+\definecolor{laranja}{HTML}{E59B36}
+\definecolor{azulagua}{HTML}{2185A6}
+\definecolor{corinterface}{HTML}{8A6D3B}
+\definecolor{azulclaro}{HTML}{EAF4F8}
+\definecolor{verdeclaro}{HTML}{EAF5EF}
+\definecolor{vermelhoclaro}{HTML}{FCEEEE}
+\newtcolorbox{conceito}[1][]{breakable,colback=azulclaro,colframe=azul!70!black,title=Ideia principal,fonttitle=\bfseries,#1}
+\newtcolorbox{atencao}[1][]{breakable,colback=areia,colframe=orange!65!black,title=Por que este passo importa,fonttitle=\bfseries,#1}
+\newtcolorbox{resultado}[1][]{breakable,colback=verdeclaro,colframe=verde,title=Resultado do modelo,fonttitle=\bfseries,#1}
+\newtcolorbox{limite}[1][]{breakable,colback=vermelhoclaro,colframe=red!65!black,title=Hipóteses e limites,fonttitle=\bfseries,#1}
+
+\begin{document}
+\begin{titlepage}
+\centering
+\vspace*{1.2cm}
+{\Large\color{azul}\bfseries PROJETO CONTENÇÕES}\par
+\vspace{1.2cm}
+{\Huge\bfseries Memorial didático de cálculo}\par
+\vspace{.3cm}
+{\LARGE Estabilidade de taludes}\par
+\vspace{.6cm}
+{\large Métodos de Fellenius e Bishop Simplificado · superfície circular · cálculo por metro de largura}\par
+\vspace{1.2cm}
+\begin{tcolorbox}[width=.9\textwidth,colback=areia,colframe=azul!60!black,arc=2mm]
+\centering
+{\large\bfseries {{ nome_projeto }}}\par\vspace{.4cm}
+Altura do talude $H={{ entradas.altura }}\,\mathrm{m}$\quad
+Face $H:V={{ entradas.relacao_face }}:1$\quad
+{{ entradas.fatias }} fatias\par
+{% if selecionado.fs != "--" %}Círculo {{ selecionado.identificacao }} · $FS_{F}={{ selecionado.fs }}${% if selecionado.bishop_fs != "--" %} · $FS_{B}={{ selecionado.bishop_fs }}${% endif %}{% else %}{{ selecionado.identificacao }} · {{ selecionado.situacao }}{% endif %}\par
+\vspace{.35cm}
+\textit{Gerado em {{ data_relatorio }} a partir dos valores e resultados calculados no aplicativo.}
+\end{tcolorbox}
+\vfill
+\begin{tikzpicture}[node distance=1.05cm,>=Stealth,every node/.style={font=\small}]
+\node[draw,rounded corners,fill=azulclaro,minimum width=2.8cm,minimum height=.8cm] (dados) {Geometria e solo};
+\node[draw,rounded corners,fill=areia,minimum width=2.8cm,minimum height=.8cm,right=of dados] (fatias) {Fatias e forças};
+\node[draw,rounded corners,fill=verdeclaro,minimum width=2.8cm,minimum height=.8cm,right=of fatias] (fs) {Fatores de segurança};
+\draw[->,thick] (dados)--(fatias);\draw[->,thick] (fatias)--(fs);
+\end{tikzpicture}
+\vspace{.6cm}
+\end{titlepage}
+
+\pagenumbering{roman}
+\setcounter{tocdepth}{0}
+\tableofcontents
+\clearpage
+\pagenumbering{arabic}
+
+\chapter{Como ler este memorial}
+Este documento apresenta o percurso do cálculo da estabilidade do talude. O relatório usa diretamente as entradas e os resultados do aplicativo: as fórmulas explicam o modelo, enquanto os quadros reproduzem os valores que ele calculou. O problema é analisado por metro de largura perpendicular ao perfil.
+
+\begin{conceito}
+Uma superfície circular divide o maciço potencialmente instável em fatias verticais. O peso e a água mobilizam ou aliviam forças na base; a coesão e o atrito oferecem resistência. O fator de segurança compara a resistência disponível com a força que tende a movimentar o conjunto.
+\end{conceito}
+
+\section{Etapas da análise}
+\begin{center}
+\begin{tikzpicture}[node distance=.55cm,>=Stealth,every node/.style={font=\small,align=center},caixa/.style={draw,rounded corners,minimum width=3.1cm,minimum height=.9cm,fill=azulclaro}]
+\node[caixa] (dados) {1. Geometria, camadas, água e sobrecarga};
+\node[caixa,right=of dados,fill=areia] (circulos) {2. Superfícies e fatias};
+\node[caixa,right=of circulos,fill=azulclaro] (forcas) {3. Pesos e forças na base};
+\node[caixa,below=of forcas,fill=verdeclaro] (fellenius) {4. FS de Fellenius};
+\node[caixa,left=of fellenius,fill=verdeclaro] (bishop) {5. FS iterativo de Bishop};
+\node[caixa,left=of bishop,fill=areia] (comparacao) {6. Comparação dos círculos};
+\draw[->,thick] (dados)--(circulos);\draw[->,thick] (circulos)--(forcas);\draw[->,thick] (forcas)--(fellenius);\draw[->,thick] (fellenius)--(bishop);\draw[->,thick] (bishop)--(comparacao);
+\end{tikzpicture}
+\end{center}
+
+\section{Entradas consideradas}
+\begin{tabularx}{\textwidth}{>{\bfseries}l X}
+Geometria & $H={{ entradas.altura }}\,\mathrm{m}$; face $H:V={{ entradas.relacao_face }}:1$; terreno a montante $\beta={{ entradas.beta }}^\circ$.\\
+Pontos da superfície & distância crista--entrada $a={{ entradas.distancia_entrada }}\,\mathrm{m}$; distância pé--saída $L_b={{ entradas.distancia_saida }}\,\mathrm{m}$.\\
+Camadas & espessura superior $h_1={{ entradas.espessura_superior }}\,\mathrm{m}$; interface a $z={{ geometria.cota_interface }}\,\mathrm{m}$ acima da base; parâmetros das camadas na tabela seguinte.\\
+Água & {% if entradas.z_na == "--" %}nível d'água não informado{% else %}$z_{NA}={{ entradas.z_na }}\,\mathrm{m}$ abaixo da crista, cota $y_{NA}={{ geometria.cota_agua }}\,\mathrm{m}${% endif %}; $\gamma_w={{ entradas.gamma_agua }}\,\mathrm{kN/m^3}$.\\
+Ação e discretização & sobrecarga uniforme $q={{ entradas.sobrecarga }}\,\mathrm{kPa}$; {{ entradas.fatias }} fatias verticais.\\
+Geometria calculada & inclinação da face $\theta={{ geometria.inclinacao_face }}^\circ$; entrada $E=({{ geometria.x_entrada }};{{ geometria.y_entrada }})\,\mathrm{m}$; distância entrada--saída $d={{ geometria.distancia }}\,\mathrm{m}$.\\
+\end{tabularx}
+
+\begin{center}
+\begin{tabular}{c r r r r}
+\toprule
+Camada & $\gamma_{nat}$ (kN/m$^3$) & $\gamma_{sat}$ (kN/m$^3$) & $c'$ (kPa) & $\varphi'$ ($^\circ$)\\
+\midrule
+{% for camada in camadas %}
+{{ camada.numero }} & {{ camada.gamma_nat }} & {{ camada.gamma_sat }} & {{ camada.coesao }} & {{ camada.phi }}\\
+{% endfor %}
+\bottomrule
+\end{tabular}
+\end{center}
+O peso específico natural é usado acima do nível d'água e o saturado abaixo. A poropressão é considerada na base das fatias pela altura de água definida pelo modelo.
+
+\chapter{Geometria e superfície de ruptura}
+O desenho mostra as dimensões da entrada, as duas camadas, o nível d'água quando informado, a sobrecarga e o círculo escolhido. As linhas verticais dividem a massa em fatias; cada fatia tem largura horizontal e uma base circular.
+\begin{center}
+{{ croqui_tikz }}
+\end{center}
+\begin{atencao}
+O esquema é cotado e acompanha o círculo em análise. O arquivo CAD contém a geometria em escala real, camadas próprias, fatias e memória para conferência no programa de desenho.
+\end{atencao}
+
+\section{Geometria de entrada e divisão em fatias}
+O comprimento horizontal da face inclinada e a coordenada do ponto de entrada são:
+\[
+L_f=(H:V)\,H={{ entradas.relacao_face }}\times{{ entradas.altura }}\,\mathrm{m},\qquad
+x_E=L_f+a={{ geometria.x_entrada }}\,\mathrm{m}.
+\]
+A distância reta entre a entrada e a saída usada na construção do centro circular é $d={{ geometria.distancia }}\,\mathrm{m}$. O comprimento total entre esses pontos é dividido em $n={{ entradas.fatias }}$ intervalos verticais.
+
+{% if circulo_selecionado %}
+\section{Círculo em análise: {{ selecionado.identificacao }}}
+O círculo tem raio $R={{ selecionado.raio }}\,\mathrm{m}$ e centro $C=({{ selecionado.centro_x }};{{ selecionado.centro_y }})\,\mathrm{m}$. Situação geométrica e de forças no cálculo de Fellenius: \textbf{ {{ selecionado.situacao }} }.
+{% else %}
+\section{Círculo em análise}
+Não foi selecionado um círculo candidato. O relatório apresenta a geometria de entrada e a comparação de todos os candidatos; não atribui forças nem fator de segurança a uma superfície inexistente.
+{% endif %}
+
+\chapter{Comparação dos círculos candidatos}
+O quadro apresenta o raio e o centro de cada candidato, os fatores calculados por cada método e a situação identificada pelo aplicativo. O valor crítico de cada método é escolhido entre seus próprios círculos válidos ou convergidos.
+\begin{center}
+{{ grafico_fs_tikz }}
+\end{center}
+{\scriptsize
+\begin{longtable}{c r r r r c c c}
+\toprule
+ID & $R$ (m) & $x_c$ (m) & $y_c$ (m) & $FS_F$ & $FS_B$ & Estado F. & Estado B.\\
+\midrule
+\endhead
+{% for circulo in circulos %}
+{{ circulo.identificacao }} & {{ circulo.raio }} & {{ circulo.centro_x }} & {{ circulo.centro_y }} & {{ circulo.fs_fellenius }} & {{ circulo.fs_bishop }} & {{ circulo.situacao_fellenius }} & {{ circulo.situacao_bishop }}\\
+{% endfor %}
+\bottomrule
+\end{longtable}
+}
+\begin{resultado}
+{% if critico_fellenius %}Menor fator válido de Fellenius: círculo {{ critico_fellenius.identificacao }}, $FS_F={{ "%.3f"|format(critico_fellenius.fator_seguranca) }}$.{% else %}Nenhum dos círculos candidatos recebeu fator de segurança válido por Fellenius.{% endif %}
+{% if critico_bishop %} Menor fator convergido de Bishop: círculo {{ critico_bishop.identificacao }}, $FS_B={{ "%.3f"|format(critico_bishop.bishop.fator_seguranca) }}$.{% else %} Nenhum círculo candidato convergiu pelo método de Bishop Simplificado.{% endif %}
+{% if critico_malha %} Melhor superfície da malha limitada (${{ pontos_malha }}\times{{ pontos_malha }}$ centros): $FS_F={{ "%.3f"|format(critico_malha.fator_seguranca) }}$, círculo {{ critico_malha.identificacao }}.{% else %} A busca limitada em malha não encontrou um círculo válido.{% endif %}
+\end{resultado}
+
+\chapter{Cálculo do fator de segurança}
+\section{Método de Fellenius}
+O método das fatias de Fellenius soma as forças resistentes e as forças mobilizadas na base de cada fatia:
+\begin{align*}
+N_i &= W_i\cos\alpha_i, & U_i &= u_i\,\Delta L_i, & N'_i &= N_i-U_i,\\
+F_{coesão,i} &= c'_1L_{1,i}+c'_2L_{2,i},\\
+F_{atrito,i} &= N'_i\left[\frac{L_{1,i}}{\Delta L_i}\tan\varphi'_1+\frac{L_{2,i}}{\Delta L_i}\tan\varphi'_2\right],\\
+F_{R,i} &= F_{coesão,i}+F_{atrito,i}, & F_{mob,i} &= W_i\sin\alpha_i,\\
+FS_F &= \frac{\sum_i F_{R,i}}{\sum_i F_{mob,i}}.
+\end{align*}
+$W_i$ é o peso próprio mais a parcela de sobrecarga; $u_i$ é a pressão neutra média; $\Delta L_i$ é o comprimento do arco da base; $L_{1,i}$ e $L_{2,i}$ são as partes desse arco em cada camada. O sinal de $\alpha_i$ permanece no termo mobilizado, conforme o cálculo do aplicativo.
+
+\begin{resultado}
+Círculo selecionado: {{ selecionado.identificacao }} · {{ selecionado.situacao }}.\par
+{% if selecionado.fs != "--" %}
+$\sum F_R={{ selecionado.resistencia }}\,\mathrm{kN/m}$ e $\sum F_{mob}={{ selecionado.mobilizada }}\,\mathrm{kN/m}$; portanto $FS_F={{ selecionado.fs }}$.\par
+{% else %}
+Não se apresenta um FS de Fellenius para este círculo porque as condições de validade não foram satisfeitas. Consulte as situações por fatia nas tabelas a seguir.\par
+{% endif %}
+{% if selecionado.bishop_fs != "--" %}Bishop Simplificado para o mesmo círculo: $FS_B={{ selecionado.bishop_fs }}$ ({{ selecionado.bishop_estado }}).{% else %}Bishop Simplificado: {{ selecionado.bishop_estado }}.{% endif %}
+\end{resultado}
+
+\section{Método de Bishop Simplificado}
+Bishop corrige o equilíbrio das forças normais entre as fatias por iteração. Para cada repetição, calcula-se $m_{\alpha,i}$ e atualiza-se o fator até que a diferença entre duas iterações consecutivas seja menor ou igual a $0{,}0001$ (limite de 20 iterações):
+\[
+m_{\alpha,i}=\cos\alpha_i+\frac{\sin\alpha_i\tan\varphi'_i}{FS_k},\qquad
+FS_{k+1}=\frac{\displaystyle\sum_i\frac{c'_i b_i+(W_i-u_i b_i)\tan\varphi'_i}{m_{\alpha,i}}}{\displaystyle\sum_iW_i\sin\alpha_i}.
+\]
+As propriedades efetivas da base entre camadas são ponderadas pelos comprimentos de contato calculados em cada fatia. O quadro abaixo registra a sequência que o aplicativo produziu para o círculo selecionado.
+\begin{center}
+\begin{tabular}{r r r}
+\toprule Iteração & $FS_k$ & $|FS_k-FS_{k-1}|$\\\midrule
+{% for iteracao in bishop_historico %}
+{{ iteracao.iteracao }} & {{ iteracao.fs }} & {{ iteracao.residuo }}\\
+{% else %}
+\multicolumn{3}{c}{Não há iterações para este círculo.}\\
+{% endfor %}
+\bottomrule
+\end{tabular}
+\end{center}
+
+\chapter{Memória das fatias}
+\section{Geometria, áreas e pesos}
+As áreas de cada camada e condição de drenagem formam o peso vertical da fatia. A sobrecarga atua somente no trecho de crista indicado na geometria.
+{\scriptsize
+\begin{longtable}{c r r r r r r r r r}
+\toprule
+$i$ & $x_1$ (m) & $x_2$ (m) & $y_b$ (m) & $\alpha$ ($^\circ$) & $\Delta L$ (m) & $A_1$ (m$^2$) & $A_2$ (m$^2$) & $W$ (kN/m) & $Q$ (kN/m)\\
+\midrule\endhead
+{% for fatia in tabelas_fatias.geometria %}
+{{ fatia.numero }} & {{ fatia.x_inicial }} & {{ fatia.x_final }} & {{ fatia.base_m }} & {{ fatia.alpha }} & {{ fatia.arco }} & {{ fatia.area_sup }} & {{ fatia.area_inf }} & {{ fatia.peso }} & {{ fatia.sobrecarga }}\\
+{% endfor %}
+\bottomrule
+\end{longtable}
+}
+$A_1$ e $A_2$ são áreas de solo acima da base da fatia em cada camada. Os pesos incluem as parcelas naturais e saturadas de acordo com o nível d'água.
+
+\section{Pressões e equilíbrio de forças}
+{\scriptsize
+\begin{longtable}{c r r r r r r r c}
+\toprule
+$i$ & $N$ (kN/m) & $U$ (kN/m) & $N'$ (kN/m) & $F_c$ (kN/m) & $F_\varphi$ (kN/m) & $F_R$ (kN/m) & $F_{mob}$ (kN/m) & Estado\\
+\midrule\endhead
+{% for fatia in tabelas_fatias.equilibrio %}
+{{ fatia.numero }} & {{ fatia.normal }} & {{ fatia.agua }} & {{ fatia.normal_efetiva }} & {{ fatia.coesao }} & {{ fatia.atrito }} & {{ fatia.resistencia }} & {{ fatia.mobilizada }} & {{ fatia.situacao }}\\
+{% endfor %}
+\bottomrule
+\end{longtable}
+}
+Cada linha expõe as parcelas calculadas. Uma normal efetiva negativa ou outra inconsistência geométrica deixa a resistência indisponível e impede que aquele círculo seja usado como válido no fator de Fellenius.
+
+\chapter{Hipóteses e limites}
+\begin{limite}
+Este estudo reproduz o modelo de análise da página: superfície circular, equilíbrio por fatias, métodos de Fellenius e Bishop Simplificado, nível d'água horizontal e até duas camadas horizontais. Os candidatos analisados são os raios informados na página; a malha complementar de centros é uma busca limitada aos raios e à região exibidos pelo aplicativo.
+
+Não são analisados superfícies não circulares, fluxo de água não hidrostático, sismo, resistência estrutural, deformações, erosão, evolução temporal ou uma busca global irrestrita de superfícies. O PDF é material de estudo e conferência dos cálculos da ferramenta; não substitui investigação geotécnica, avaliação profissional e verificação do projeto executivo.
+\end{limite}
+
+\end{document}

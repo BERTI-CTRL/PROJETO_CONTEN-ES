@@ -16,6 +16,11 @@ from contencoes.calculos.calculos_estabilidade_taludes import (
     validar_entradas_talude,
 )
 from contencoes.cad.exportar_talude_dxf import gerar_desenho_talude_dxf
+from contencoes.relatorios.gerar_relatorio_talude import (
+    ErroGeracaoRelatorioTalude,
+    compilar_relatorio_talude_pdf,
+    montar_relatorio_talude_tex,
+)
 from contencoes.visualizacao.memorias_passo_a_passo import montar_memorial_passo_a_passo_talude
 
 
@@ -1373,8 +1378,9 @@ st.caption(
 st.info(
     "Informe a geometria, água e parâmetros do solo para comparar os raios circulares pelo método "
     "de Fellenius e de Bishop Simplificado. Veja o FS de cada círculo, as fatias e o perfil; "
-    "o CAD pode ser baixado para o círculo selecionado."
+    "gere o CAD e o relatório no topo da página para o círculo selecionado."
 )
+area_documentos_topo = st.empty()
 if aviso_armazenamento:
     st.warning(aviso_armazenamento)
 with st.expander("Sobre o salvamento dos dados"):
@@ -1526,6 +1532,16 @@ armazenamento_local.setItem(
 
 erros_entrada = validar_entradas_talude(entradas_talude)
 if erros_entrada:
+    with area_documentos_topo.container():
+        st.button(
+            "Gerar CAD e relatório",
+            type="primary",
+            use_container_width=True,
+            disabled=True,
+            key="gerar_cad_relatorio_talude_topo_invalido",
+            help="Corrija as entradas para liberar os arquivos.",
+        )
+        st.caption("Corrija as entradas do talude para gerar os documentos.")
     st.error("Revise as entradas antes de consultar os resultados.")
     for erro in erros_entrada:
         st.markdown(f"- {erro}")
@@ -1552,6 +1568,106 @@ else:
             for circulo in circulos
             if circulo["identificacao"] == identificacao_desenho
         )
+
+    # O placeholder foi reservado no topo e recebe os controles quando os
+    # resultados e o círculo escolhido já estão disponíveis nesta execução.
+    assinatura_documentos = json.dumps(
+        {"entradas": entradas_talude, "circulo": identificacao_desenho},
+        sort_keys=True,
+        ensure_ascii=False,
+    )
+    chave_pacote_documentos = "pacote_documentos_talude_topo"
+    pacote_documentos = st.session_state.get(chave_pacote_documentos)
+    if (
+        isinstance(pacote_documentos, dict)
+        and pacote_documentos.get("assinatura") != assinatura_documentos
+    ):
+        st.session_state.pop(chave_pacote_documentos, None)
+        pacote_documentos = None
+
+    with area_documentos_topo.container():
+        coluna_gerar, coluna_instrucoes = st.columns([1.15, 2.5], vertical_alignment="center")
+        with coluna_gerar:
+            clicou_gerar_documentos = st.button(
+                "Gerar CAD e relatório",
+                type="primary",
+                use_container_width=True,
+                key="gerar_cad_relatorio_talude_topo",
+                help="Prepara o DXF, o relatório didático em PDF e sua fonte LaTeX.",
+            )
+        with coluna_instrucoes:
+            st.caption("Gera os arquivos com as entradas atuais e o círculo selecionado.")
+
+        if clicou_gerar_documentos:
+            with st.spinner("Montando o CAD e o relatório didático de taludes..."):
+                arquivo_dxf = None
+                if circulo_desenhado and circulo_desenhado["situacao"] == "VÁLIDO":
+                    arquivo_dxf = gerar_desenho_talude_dxf(
+                        entradas_talude, resultado_talude, circulo_desenhado
+                    )
+                fonte_tex = montar_relatorio_talude_tex(
+                    entradas_talude, resultado_talude, circulo_desenhado
+                ).encode("utf-8")
+                erro_pdf = None
+                try:
+                    arquivo_pdf = compilar_relatorio_talude_pdf(
+                        fonte_tex.decode("utf-8")
+                    )
+                except ErroGeracaoRelatorioTalude as erro:
+                    arquivo_pdf = None
+                    erro_pdf = str(erro)
+                pacote_documentos = {
+                    "assinatura": assinatura_documentos,
+                    "dxf": arquivo_dxf,
+                    "pdf": arquivo_pdf,
+                    "tex": fonte_tex,
+                    "erro_pdf": erro_pdf,
+                }
+                st.session_state[chave_pacote_documentos] = pacote_documentos
+
+        if isinstance(pacote_documentos, dict):
+            st.success("Arquivos preparados com as entradas atuais do talude.")
+            colunas_download = st.columns(3)
+            if pacote_documentos["dxf"] is not None:
+                identificacao_arquivo = (
+                    circulo_desenhado["identificacao"].lower().replace(" ", "_")
+                )
+                colunas_download[0].download_button(
+                    "Baixar CAD (.dxf)",
+                    data=pacote_documentos["dxf"],
+                    file_name=f"talude_{identificacao_arquivo}.dxf",
+                    mime="application/dxf",
+                    key="baixar_dxf_talude_topo",
+                    use_container_width=True,
+                )
+            else:
+                colunas_download[0].warning(
+                    "O CAD exige um círculo válido. O relatório continua disponível."
+                )
+            if pacote_documentos["pdf"] is not None:
+                colunas_download[1].download_button(
+                    "Baixar relatório didático (.pdf)",
+                    data=pacote_documentos["pdf"],
+                    file_name="memorial_didatico_estabilidade_talude.pdf",
+                    mime="application/pdf",
+                    key="baixar_relatorio_talude_topo",
+                    use_container_width=True,
+                )
+            else:
+                colunas_download[1].warning(
+                    "O PDF não compilou neste servidor; baixe a fonte .tex para compilar localmente."
+                )
+            colunas_download[2].download_button(
+                "Baixar fonte LaTeX/TikZ (.tex)",
+                data=pacote_documentos["tex"],
+                file_name="memorial_didatico_estabilidade_talude.tex",
+                mime="application/x-tex",
+                key="baixar_fonte_tex_talude_topo",
+                use_container_width=True,
+            )
+            if pacote_documentos.get("erro_pdf"):
+                with st.expander("Detalhes da compilação do PDF"):
+                    st.code(pacote_documentos["erro_pdf"], language="text")
 
     st.divider()
     st.subheader("Comparação dos círculos candidatos")
@@ -1600,28 +1716,10 @@ else:
         colunas_resultado[3].metric(
             "Centro y_c", f"{_formatar_numero(circulo_critico['centro_y_m'])} m"
         )
-        if circulo_desenhado and circulo_desenhado["situacao"] == "VÁLIDO":
-            arquivo_dxf_talude = gerar_desenho_talude_dxf(
-                entradas_talude, resultado_talude, circulo_desenhado
-            )
-            st.download_button(
-                "Baixar CAD do círculo selecionado (.dxf)",
-                data=arquivo_dxf_talude,
-                file_name=(
-                    f"perfil_talude_{circulo_desenhado['identificacao'].lower()}.dxf"
-                ),
-                mime="application/dxf",
-                help="O DXF usa o círculo escolhido no campo 'Círculo para analisar'. Inclui o perfil, as fatias e a memória completa.",
-                key="baixar_dxf_circulo_selecionado_talude",
-            )
-            st.caption(
-                "No DXF, a camada AREA_CONFERENCIA contém uma polilinha fechada por fatia. "
-                "Use AREA > Objeto e compare com Atotal de cada fatia no memorial."
-            )
-        elif circulo_desenhado:
+        if circulo_desenhado and circulo_desenhado["situacao"] != "VÁLIDO":
             st.info(
-                "O CAD fica disponível para círculos válidos. Este raio foi marcado como "
-                f"{circulo_desenhado['situacao']} e não entra no cálculo do FS crítico."
+                "O CAD deste círculo fica indisponível enquanto ele não for válido. "
+                f"Situação calculada: {circulo_desenhado['situacao']}."
             )
     else:
         st.warning("Nenhum dos raios candidatos produziu um círculo válido por Fellenius.")

@@ -27,3 +27,12 @@ O relatório detalha dados, geometria, coeficientes de empuxo, tensões, pressõ
 integrações por trecho, forças e momentos, tombamento, deslizamento e contato na
 fundação. Também inclui croqui, diagramas vetoriais, gráfico comparativo,
 animação opcional no PDF e uma seção de escopo/limitações.
+
+## Estabilidade de taludes
+
+A página de taludes prepara um DXF, um relatório PDF e a fonte LaTeX/TikZ com
+as entradas atuais e o círculo selecionado. O relatório explica Fellenius e
+Bishop Simplificado, inclui o croqui cotado, compara os círculos candidatos,
+mostra a sequência de iterações de Bishop e apresenta as geometrias e forças
+de cada fatia. Se o compilador PDF não estiver disponível, a fonte `.tex`
+permanece disponível para download.
