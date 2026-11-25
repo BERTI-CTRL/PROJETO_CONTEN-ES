@@ -201,11 +201,16 @@ with coluna_referencia:
     )
 
 aba_pressao, aba_fundo, aba_graux, aba_froehlich = st.tabs(
-    ["Pressões e escoras", "Ruptura de fundo", "Critério de Graux", "Profundidade crítica"]
+    [
+        "1–2. Pressões e escoras",
+        "3. Ruptura de fundo",
+        "4. Critério de Graux",
+        "5. Profundidade crítica",
+    ]
 )
 
 with aba_pressao:
-    st.subheader("Pressão aparente e carga por escora")
+    st.subheader("1. Pressões aparentes e escoras")
     download_pressao = st.container()
     croqui_pressao = st.empty()
     colunas_entrada = st.columns(3)
@@ -302,6 +307,7 @@ with aba_pressao:
             partial(gerar_dxf_pressao_aparente, entradas_pressao),
         )
         st.divider()
+        st.subheader("2. Cálculo da envoltória e da força por escora")
         colunas_resultados = st.columns(5)
         colunas_resultados[0].metric(
             "Pressão aparente máxima",
@@ -329,7 +335,7 @@ with aba_pressao:
             "A estimativa adota divisão igual da carga entre os níveis de escoras."
         )
 
-        with st.expander("Memória de cálculo da pressão aparente"):
+        with st.expander("2.1. Memória de cálculo da pressão aparente"):
             st.latex(r"K_a=\tan^2\left(45^\circ-\frac{\varphi}{2}\right)")
             if entradas_pressao["tipo_solo"] == MODELOS_ENVOLTORIA[0]:
                 st.latex(r"p_{max}=0{,}65(\gamma H+q)K_a \qquad E_{app}=p_{max}H")
@@ -370,7 +376,7 @@ with aba_pressao:
                     "O resultado segue a fórmula da planilha."
                 )
 
-        st.subheader("Envoltória de pressão aparente do solo")
+        st.subheader("2.2. Envoltória de pressão aparente do solo")
         st.caption("Este gráfico mostra somente a parcela do solo; a pressão da água aparece em separado abaixo.")
         _mostrar_grafico_pressao(
             resultado_pressao["diagrama_pressao_aparente"],
@@ -379,7 +385,7 @@ with aba_pressao:
             "#c34b3c",
             "rgba(195, 75, 60, 0.14)",
         )
-        st.subheader("Pressão hidrostática no trecho escavado")
+        st.subheader("2.3. Pressão hidrostática no trecho escavado")
         if resultado_pressao["diagrama_pressao_agua"]:
             st.caption("A distribuição triangular começa no nível d'água e termina no fundo da escavação.")
             _mostrar_grafico_pressao(
@@ -393,7 +399,7 @@ with aba_pressao:
             st.info("zNA está no fundo ou abaixo dele; não há pressão hidrostática dentro do corte.")
 
 with aba_fundo:
-    st.subheader("Ruptura de fundo em argila não drenada")
+    st.subheader("3. Ruptura de fundo em argila não drenada")
     st.caption("Modelo de Terzaghi para o mecanismo simplificado mostrado nas aulas.")
     download_fundo = st.container()
     croqui_fundo = st.empty()
@@ -452,7 +458,7 @@ with aba_fundo:
                 "A tensão solicitante ficou menor ou igual a zero. A planilha retorna FS = 0 nesse caso; "
                 "esse valor é um marcador de revisão, não um fator de segurança físico válido."
             )
-        with st.expander("Memória de cálculo da ruptura de fundo"):
+        with st.expander("3.1. Memória de cálculo da ruptura de fundo"):
             st.latex(r"\sigma_z=\gamma H-\frac{2}{B}Hc_u")
             st.latex(r"\sigma_r=5{,}7c_u \qquad FS=\frac{\sigma_r}{\sigma_z}")
             st.latex(r"H_{cr}=\frac{5{,}7c_u}{\gamma-2c_u/B}")
@@ -469,7 +475,7 @@ with aba_fundo:
             st.caption("A expressão não considera efeitos tridimensionais nem água.")
 
 with aba_graux:
-    st.subheader("Sifonamento e estabilidade hidráulica · Graux")
+    st.subheader("4. Sifonamento e estabilidade hidráulica · Graux")
     st.caption("Modelo simplificado de percolação ao longo da ficha e equilíbrio no fundo.")
     download_graux = st.container()
     croqui_graux = st.empty()
@@ -534,7 +540,7 @@ with aba_graux:
             _formatar_numero(resultado_graux["fator_seguranca"]),
             resultado_graux["status"],
         )
-        with st.expander("Memória de cálculo do critério de Graux"):
+        with st.expander("4.1. Memória de cálculo do critério de Graux"):
             st.latex(r"L=Z+2D \qquad i=\frac{Z}{L}")
             st.latex(r"\sigma_e=(H-Z)_+\gamma_n+(Z+D)(\gamma_{sub}+i\gamma_w)")
             st.latex(r"\sigma_i=D(\gamma_{sub}-i\gamma_w)_+")
@@ -560,7 +566,7 @@ with aba_graux:
         )
 
 with aba_froehlich:
-    st.subheader("Profundidade crítica de corte vertical sem suporte")
+    st.subheader("5. Profundidade crítica de corte vertical sem suporte")
     st.caption("Expressão teórica de Fröhlich; compara a altura informada com Hcr.")
     download_froehlich = st.container()
     croqui_froehlich = st.empty()
@@ -606,7 +612,7 @@ with aba_froehlich:
             f"{_formatar_numero(resultado_froehlich['altura_escavacao_m'])} m",
         )
         colunas_resultado_froehlich[2].metric("Condição", resultado_froehlich["status"])
-        with st.expander("Memória de cálculo de Fröhlich"):
+        with st.expander("5.1. Memória de cálculo de Fröhlich"):
             st.latex(r"H_{cr}=\frac{4c}{\gamma}\tan\left(45^\circ+\frac{\varphi}{2}\right)")
             st.markdown(
                 "Se **H ≤ Hcr**, a altura fica dentro do limite teórico do modelo. "

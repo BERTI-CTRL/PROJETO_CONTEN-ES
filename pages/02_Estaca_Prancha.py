@@ -173,10 +173,12 @@ with coluna_exemplo:
         "Ancorada: q = 12 kPa, D = 4 m, f = 3,5 m, φ = 30°."
     )
 
-aba_balanco, aba_ancorada = st.tabs(["Cortina em balanço", "Cortina ancorada"])
+aba_balanco, aba_ancorada = st.tabs(
+    ["1–3. Cortina em balanço", "4–6. Cortina ancorada"]
+)
 
 with aba_balanco:
-    st.subheader("Entradas · solo granular homogêneo")
+    st.subheader("1. Cortina em balanço — entradas do solo granular")
     download_balanco = st.container()
     croqui_balanco = st.empty()
     colunas_entrada_balanco = st.columns(3)
@@ -239,7 +241,7 @@ with aba_balanco:
             partial(gerar_dxf_cortina_em_balanco, entradas_balanco, resultado_balanco),
         )
         st.divider()
-        st.subheader("Resultados da ficha")
+        st.subheader("2. Resultados da ficha")
         colunas_resultado_balanco = st.columns(4)
         colunas_resultado_balanco[0].metric(
             "Coeficiente ativo, Kₐ",
@@ -261,13 +263,13 @@ with aba_balanco:
             "A ficha teórica reproduz o equilíbrio de momentos da planilha; a ficha preliminar "
             "inclui o acréscimo prático informado."
         )
-        st.subheader("Diagrama de pressões")
+        st.subheader("3. Diagrama de pressões")
         st.caption("As pressões ativas e passivas aparecem em lados opostos do eixo zero.")
         mostrar_diagrama_pressao_cortina_em_balanco(resultado_balanco)
         mostrar_memoria_cortina_em_balanco(resultado_balanco)
 
 with aba_ancorada:
-    st.subheader("Entradas · duas camadas e ficha conhecida")
+    st.subheader("4. Cortina ancorada — entradas e ficha conhecida")
     download_ancorada = st.container()
     croqui_ancorada = st.empty()
     colunas_entrada_ancorada = st.columns(3)
@@ -369,7 +371,7 @@ with aba_ancorada:
             partial(gerar_dxf_cortina_ancorada, entradas_ancorada, resultado_ancorada),
         )
         st.divider()
-        st.subheader("Resultados da cortina ancorada")
+        st.subheader("5. Resultados da cortina ancorada")
         colunas_resultado_ancorada = st.columns(5)
         colunas_resultado_ancorada[0].metric(
             "Empuxo ativo do solo",
@@ -401,7 +403,7 @@ with aba_ancorada:
         for aviso in resultado_ancorada["avisos"]:
             st.caption(aviso)
 
-        st.subheader("Diagrama de pressões")
+        st.subheader("6. Diagrama de pressões")
         st.caption(
             "A pressão passiva está limitada à ficha abaixo da escavação. "
             "A pressão diferencial da água atua do N.A. até a ponta, com o lado escavado drenado."
