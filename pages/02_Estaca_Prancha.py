@@ -31,6 +31,8 @@ from contencoes.visualizacao.visualizacao_estaca_prancha import (
     mostrar_memoria_cortina_ancorada,
 )
 
+from contencoes.visualizacao.download_corte_dxf import mostrar_download_corte
+
 
 st.set_page_config(page_title="Estaca-prancha | Contenções", page_icon="📐", layout="wide")
 
@@ -174,6 +176,7 @@ aba_balanco, aba_ancorada = st.tabs(["Cortina em balanço", "Cortina ancorada"])
 
 with aba_balanco:
     st.subheader("Entradas · solo granular homogêneo")
+    download_balanco = st.container()
     croqui_balanco = st.empty()
     colunas_entrada_balanco = st.columns(3)
     with colunas_entrada_balanco[0]:
@@ -220,6 +223,7 @@ with aba_balanco:
     }
     erros_balanco = validar_entradas_cortina_em_balanco(entradas_balanco)
     if erros_balanco:
+        mostrar_download_corte(download_balanco, "cortina_em_balanco")
         st.error("Revise os dados antes de consultar a ficha.")
         for erro in erros_balanco:
             st.markdown(f"- {erro}")
@@ -229,13 +233,9 @@ with aba_balanco:
             gerar_svg_cortina_em_balanco(entradas_balanco, resultado_balanco),
             unsafe_allow_html=True,
         )
-        st.download_button(
-            "Baixar corte em DXF",
-            data=partial(gerar_dxf_cortina_em_balanco, entradas_balanco, resultado_balanco),
-            file_name="cortina_em_balanco.dxf",
-            mime="application/dxf",
-            key="dxf_estaca_prancha_balanco",
-            on_click="ignore",
+        mostrar_download_corte(
+            download_balanco, "cortina_em_balanco",
+            partial(gerar_dxf_cortina_em_balanco, entradas_balanco, resultado_balanco),
         )
         st.divider()
         st.subheader("Resultados da ficha")
@@ -267,6 +267,7 @@ with aba_balanco:
 
 with aba_ancorada:
     st.subheader("Entradas · duas camadas e ficha conhecida")
+    download_ancorada = st.container()
     croqui_ancorada = st.empty()
     colunas_entrada_ancorada = st.columns(3)
     with colunas_entrada_ancorada[0]:
@@ -345,6 +346,7 @@ with aba_ancorada:
     }
     erros_ancorada = validar_entradas_cortina_ancorada(entradas_ancorada)
     if erros_ancorada:
+        mostrar_download_corte(download_ancorada, "cortina_ancorada")
         st.error("Revise os dados antes de consultar os resultados.")
         for erro in erros_ancorada:
             st.markdown(f"- {erro}")
@@ -354,13 +356,9 @@ with aba_ancorada:
             gerar_svg_cortina_ancorada(entradas_ancorada, resultado_ancorada),
             unsafe_allow_html=True,
         )
-        st.download_button(
-            "Baixar corte em DXF",
-            data=partial(gerar_dxf_cortina_ancorada, entradas_ancorada, resultado_ancorada),
-            file_name="cortina_ancorada.dxf",
-            mime="application/dxf",
-            key="dxf_estaca_prancha_ancorada",
-            on_click="ignore",
+        mostrar_download_corte(
+            download_ancorada, "cortina_ancorada",
+            partial(gerar_dxf_cortina_ancorada, entradas_ancorada, resultado_ancorada),
         )
         st.divider()
         st.subheader("Resultados da cortina ancorada")
