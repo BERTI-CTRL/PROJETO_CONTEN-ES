@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import hashlib
 import math
 from copy import deepcopy
 from typing import Any
@@ -16,6 +17,11 @@ from contencoes.calculos.calculos_muro_de_arrimo import (
 )
 from contencoes.cad.exportar_muro_arrimo_dxf import gerar_desenho_muro_dxf
 from contencoes.visualizacao.memorias_passo_a_passo import montar_memorial_passo_a_passo_muro
+from contencoes.relatorios.gerar_relatorio_muro_arrimo import (
+    ErroGeracaoRelatorio,
+    montar_relatorio_muro_tex,
+    compilar_relatorio_muro_pdf,
+)
 
 
 st.set_page_config(page_title="Muro de arrimo | Contenções", page_icon="🧱", layout="wide")
@@ -89,6 +95,11 @@ def _capturar_dados_dos_widgets() -> dict[str, Any]:
         for indice in range(QUANTIDADE_MAXIMA_CAMADAS)
     ]
     return {"entradas_muro": entradas, "camadas_solo": camadas}
+
+
+def _assinatura_documentos(dados: dict[str, Any]) -> str:
+    serializado = json.dumps(dados, sort_keys=True, ensure_ascii=False, default=str)
+    return hashlib.sha256(serializado.encode("utf-8")).hexdigest()
 
 
 def _formatar_numero(valor: float | None, casas: int = 2) -> str:
@@ -734,6 +745,100 @@ st.info(
     "O app calcula empuxos, tombamento, deslizamento e tensões na base; apresenta o croqui, "
     "a memória de cálculo e o desenho CAD para baixar."
 )
+
+# O botão do topo usa os valores atuais preservados no estado da sessão/navegador.
+# Os arquivos ficam em cache até qualquer entrada mudar, para que baixar o PDF ou
+# o DXF não dispare a compilação LaTeX outra vez.
+dados_documentos_topo = _capturar_dados_dos_widgets()
+erros_documentos_topo = validar_entradas_muro(
+    dados_documentos_topo["entradas_muro"], dados_documentos_topo["camadas_solo"]
+)
+assinatura_documentos_topo = _assinatura_documentos(dados_documentos_topo)
+pacote_documentos_topo = st.session_state.get("pacote_documentos_muro_topo")
+if (
+    isinstance(pacote_documentos_topo, dict)
+    and pacote_documentos_topo.get("assinatura") != assinatura_documentos_topo
+):
+    st.session_state.pop("pacote_documentos_muro_topo", None)
+    pacote_documentos_topo = None
+
+coluna_gerar_documentos, coluna_texto_geracao = st.columns([1.15, 2.5], vertical_alignment="center")
+with coluna_gerar_documentos:
+    clicou_gerar_documentos = st.button(
+        "Gerar CAD e relatório",
+        type="primary",
+        use_container_width=True,
+        key="gerar_cad_relatorio_muro_topo",
+        help="Usa as entradas atuais para preparar o DXF, o PDF didático e a fonte LaTeX/TikZ.",
+    )
+with coluna_texto_geracao:
+    st.caption("Disponível no topo para gerar os arquivos sem rolar até o fim dos resultados.")
+
+if clicou_gerar_documentos:
+    if erros_documentos_topo:
+        st.error("Corrija os dados do muro antes de gerar os arquivos: " + " ".join(erros_documentos_topo))
+    else:
+        entradas_topo = dados_documentos_topo["entradas_muro"]
+        camadas_topo = dados_documentos_topo["camadas_solo"]
+        with st.spinner("Calculando o muro e montando o CAD e o memorial em LaTeX..."):
+            resultado_topo = calcular_muro(entradas_topo, camadas_topo)
+            arquivo_dxf_topo = gerar_desenho_muro_dxf(
+                entradas_topo, camadas_topo, resultado_topo
+            )
+            fonte_tex_topo = montar_relatorio_muro_tex(
+                entradas_topo, camadas_topo, resultado_topo
+            ).encode("utf-8")
+            erro_pdf_topo = None
+            try:
+                arquivo_pdf_topo = compilar_relatorio_muro_pdf(fonte_tex_topo.decode("utf-8"))
+            except ErroGeracaoRelatorio as erro:
+                arquivo_pdf_topo = None
+                erro_pdf_topo = str(erro)
+            st.session_state["pacote_documentos_muro_topo"] = {
+                "assinatura": assinatura_documentos_topo,
+                "dxf": arquivo_dxf_topo,
+                "pdf": arquivo_pdf_topo,
+                "tex": fonte_tex_topo,
+                "erro_pdf": erro_pdf_topo,
+            }
+            pacote_documentos_topo = st.session_state["pacote_documentos_muro_topo"]
+
+if isinstance(pacote_documentos_topo, dict):
+    st.success("Arquivos preparados com os valores atuais do muro.")
+    colunas_download_topo = st.columns(3)
+    colunas_download_topo[0].download_button(
+        "Baixar CAD (.dxf)",
+        data=pacote_documentos_topo["dxf"],
+        file_name="muro_de_arrimo.dxf",
+        mime="application/dxf",
+        key="baixar_dxf_muro_arrimo_topo",
+        use_container_width=True,
+    )
+    if pacote_documentos_topo["pdf"] is not None:
+        colunas_download_topo[1].download_button(
+            "Baixar relatório didático (.pdf)",
+            data=pacote_documentos_topo["pdf"],
+            file_name="memorial_didatico_muro_de_arrimo.pdf",
+            mime="application/pdf",
+            key="baixar_relatorio_muro_arrimo_topo",
+            use_container_width=True,
+        )
+    else:
+        colunas_download_topo[1].warning(
+            "O PDF não compilou neste servidor; baixe a fonte .tex e compile no MiKTeX ou TeX Live."
+        )
+    colunas_download_topo[2].download_button(
+        "Baixar fonte LaTeX/TikZ (.tex)",
+        data=pacote_documentos_topo["tex"],
+        file_name="memorial_didatico_muro_de_arrimo.tex",
+        mime="application/x-tex",
+        key="baixar_fonte_tex_muro_arrimo_topo",
+        use_container_width=True,
+    )
+    if pacote_documentos_topo.get("erro_pdf"):
+        with st.expander("Detalhes da compilação do PDF"):
+            st.code(pacote_documentos_topo["erro_pdf"], language="text")
+
 if aviso_armazenamento:
     st.warning(aviso_armazenamento)
 with st.expander("Sobre o salvamento dos dados"):

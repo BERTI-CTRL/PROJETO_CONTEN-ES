@@ -1,0 +1,374 @@
+\documentclass[11pt,a4paper,oneside]{report}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[brazilian]{babel}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage[a4paper,margin=2.25cm,headheight=15pt]{geometry}
+\usepackage{amsmath,amssymb,mathtools}
+\usepackage{booktabs,tabularx,longtable,array}
+\usepackage{xcolor}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,calc,patterns,positioning,shapes.geometric}
+\usepackage{animate}
+\usepackage{tcolorbox}
+\tcbuselibrary{skins,breakable}
+\usepackage{fancyhdr}
+\usepackage{enumitem}
+\usepackage{hyperref}
+\hypersetup{colorlinks=true,linkcolor=blue!45!black,urlcolor=blue!45!black,pdftitle={Memorial didático de muro de arrimo},pdfauthor={Projeto Contenções}}
+\setlength{\parskip}{5pt}
+\setlength{\parindent}{0pt}
+\setlist[itemize]{leftmargin=1.5em,itemsep=2pt,topsep=3pt}
+\pagestyle{fancy}
+\fancyhf{}
+\lhead{Projeto Contenções · Muro de arrimo}
+\rhead{Memorial de cálculo didático}
+\cfoot{\thepage}
+\definecolor{azul}{HTML}{1F5A7A}
+\definecolor{verde}{HTML}{176452}
+\definecolor{areia}{HTML}{F6F0E4}
+\definecolor{azulclaro}{HTML}{EAF4F8}
+\definecolor{verdeclaro}{HTML}{EAF5EF}
+\definecolor{vermelhoclaro}{HTML}{FCEEEE}
+\newtcolorbox{conceito}[1][]{breakable,colback=azulclaro,colframe=azul!70!black,title=Ideia principal,fonttitle=\bfseries,#1}
+\newtcolorbox{atencao}[1][]{breakable,colback=areia,colframe=orange!65!black,title=Por que este passo importa,fonttitle=\bfseries,#1}
+\newtcolorbox{resultado}[1][]{breakable,colback=verdeclaro,colframe=verde,title=Resultado do modelo,fonttitle=\bfseries,#1}
+\newtcolorbox{limite}[1][]{breakable,colback=vermelhoclaro,colframe=red!65!black,title=Hipótese e limite,fonttitle=\bfseries,#1}
+
+\begin{document}
+\begin{titlepage}
+\centering
+\vspace*{1.1cm}
+{\Large\color{azul}\bfseries PROJETO CONTENÇÕES}\par
+\vspace{1.2cm}
+{\Huge\bfseries Memorial didático de cálculo}\par
+\vspace{.25cm}
+{\LARGE Muro de arrimo de gravidade}\par
+\vspace{.8cm}
+{\large Cálculo por metro de comprimento · teoria {{ metodo }} · verificação de estabilidade e contato}\par
+\vspace{1.2cm}
+\begin{tcolorbox}[width=.88\textwidth,colback=areia,colframe=azul!60!black,arc=2mm]
+\centering
+{\large\bfseries {{ nome_projeto }}}\par\vspace{.4cm}
+Altura $H={{ entradas.H }}\,\mathrm{m}$\quad
+Base $b={{ entradas.b }}\,\mathrm{m}$\quad
+Topo $t={{ entradas.t }}\,\mathrm{m}$\par
+{{ numero_camadas }} camada(s) de solo · {{ numero_trechos }} trecho(s) de integração\par
+\vspace{.35cm}
+\textit{Gerado em {{ data_relatorio }}\space a partir dos valores e resultados calculados no aplicativo.}
+\end{tcolorbox}
+\vfill
+\begin{tikzpicture}[node distance=1.05cm,>=Stealth,every node/.style={font=\small}]
+\node[draw,rounded corners,fill=azulclaro,minimum width=2.7cm,minimum height=.8cm] (geo) {Geometria};
+\node[draw,rounded corners,fill=areia,minimum width=2.7cm,minimum height=.8cm,right=of geo] (press) {Pressões};
+\node[draw,rounded corners,fill=verdeclaro,minimum width=2.7cm,minimum height=.8cm,right=of press] (check) {Equilíbrio e verificações};
+\draw[->,thick] (geo)--(press);
+\draw[->,thick] (press)--(check);
+\end{tikzpicture}
+\vspace{.5cm}
+\end{titlepage}
+
+\pagenumbering{roman}
+\setcounter{tocdepth}{0}
+\tableofcontents
+\clearpage
+\pagenumbering{arabic}
+
+\chapter{Como ler este memorial}
+Este documento reconstrói o caminho do cálculo do muro com as fórmulas utilizadas pelo aplicativo. Em cada etapa, primeiro aparece a ideia física, depois a expressão geral e, em seguida, os valores deste caso. As unidades são indicadas para ajudar a conferir dimensão e ordem de grandeza.
+
+\begin{conceito}
+O problema é calculado em uma faixa de muro com \textbf{um metro de comprimento}. Assim, pesos e forças aparecem em $\mathrm{kN/m}$, momentos em $\mathrm{kN\cdot m/m}$ e pressões em $\mathrm{kPa}$. A geometria é uma seção trapezoidal rígida. O solo exerce pressão lateral; essa pressão produz força e momento que tendem a tombar o muro. O peso próprio e o atrito na base oferecem resistência.
+\end{conceito}
+
+\section{Mapa do procedimento}
+\begin{center}
+\begin{tikzpicture}[node distance=.7cm,>=Stealth,every node/.style={font=\small,align=center},caixa/.style={draw,rounded corners,minimum width=3.1cm,minimum height=1cm,fill=azulclaro}]
+\node[caixa] (dados) {1. Geometria, solo, água e ações};
+\node[caixa,right=of dados,fill=areia] (ka) {2. $K_a$ e tensões efetivas};
+\node[caixa,right=of ka,fill=azulclaro] (pressao) {3. Pressões e diagramas};
+\node[caixa,below=of pressao,fill=areia] (integral) {4. Integração: $E$ e $M$};
+\node[caixa,left=of integral,fill=verdeclaro] (equilibrio) {5. Peso próprio e equilíbrio};
+\node[caixa,left=of equilibrio,fill=verdeclaro] (checks) {6. Tombamento, deslizamento e base};
+\draw[->,thick] (dados)--(ka);\draw[->,thick] (ka)--(pressao);
+\draw[->,thick] (pressao)--(integral);\draw[->,thick] (integral)--(equilibrio);
+\draw[->,thick] (equilibrio)--(checks);
+\end{tikzpicture}
+\end{center}
+
+\section{Entradas consideradas}
+\begin{tabularx}{\textwidth}{>{\bfseries}l X}
+Geometria & $H={{ entradas.H }}\,\mathrm{m}$; $b={{ entradas.b }}\,\mathrm{m}$; $t={{ entradas.t }}\,\mathrm{m}$.\\
+Aterro e contato & $\beta={{ entradas.beta }}^\circ$; $\delta={{ entradas.delta }}^\circ$; método de empuxo: {{ metodo }}.\\
+Ação externa & sobrecarga uniforme $q={{ entradas.q }}\,\mathrm{kPa}$.\\
+Concreto & peso específico $\gamma_c={{ entradas.gamma_c }}\,\mathrm{kN/m^3}$.\\
+Fundação & atrito $f={{ entradas.atrito_base }}$; tensão admissível $q_{adm}={{ entradas.qadm }}\,\mathrm{kPa}$.\\
+Critérios informados & $FS_{tomb,min}={{ entradas.fs_tomb_min }}$; $FS_{des,min}={{ entradas.fs_des_min }}$.\\
+Nível d'água & {% if entradas.z_na is none %}não informado{% else %}profundidade $z_{NA}={{ entradas.z_na }}\,\mathrm{m}$ a partir do topo{% endif %}; $\gamma_w={{ entradas.gamma_w }}\,\mathrm{kN/m^3}$.\\
+\end{tabularx}
+
+\clearpage
+\section{Perfil do solo}
+\begin{longtable}{c r r r r r}
+\toprule
+Camada & $h$ (m) & $\gamma_{nat}$ (kN/m$^3$) & $\gamma_{sat}$ (kN/m$^3$) & $\varphi$ & $c$ (kPa)\\
+\midrule
+\endhead
+{% for camada in camadas %}
+{{ camada.indice }} & {{ camada.espessura }} & {{ camada.gamma_nat }} & {{ camada.gamma_sat }} & ${{ camada.phi }}^\circ$ & {{ camada.coesao }}\\
+{% endfor %}
+\bottomrule
+\end{longtable}
+As espessuras das camadas somam a altura do muro. O peso específico efetivo abaixo do nível d'água é calculado como peso específico saturado menos o peso específico da água.
+
+\chapter{Geometria e mecanismo de empuxo}
+\section{Croqui da seção}
+O desenho abaixo coloca muro, camadas, superfície do aterro, nível d'água, carga e dimensões na mesma seção. O solo retido está representado a montante da face inclinada.
+\begin{center}
+{{ geometria_tikz }}
+\end{center}
+
+\begin{atencao}
+O croqui é esquemático e não substitui o DXF cotado. Ele serve para acompanhar sinais, dimensões e posição relativa das ações. O cálculo do aplicativo considera a seção por metro de comprimento e a distribuição lateral indicada nas etapas seguintes.
+\end{atencao}
+
+\section{Coeficiente de empuxo ativo $K_a$}
+O coeficiente $K_a$ transforma tensão vertical efetiva em pressão horizontal ativa. Ele depende da teoria escolhida e dos ângulos do solo, aterro e interface solo--muro.
+{% for camada in camadas %}
+\subsection*{Camada {{ camada.indice }}}
+\[
+{{ camada.ka_formula }}
+\]
+O ângulo de atrito efetivo utilizado é $\varphi={{ camada.phi }}^\circ$. O valor de $K_a$ permanece associado à camada ao longo dos trechos em que ela aparece.
+{% endfor %}
+
+\chapter{Tensões e pressões laterais}
+\section{Tensão vertical efetiva}
+Para cada trecho, o peso das camadas acima produz a tensão vertical efetiva. Acima do nível d'água usa-se $\gamma_{nat}$; abaixo dele, usa-se o peso submerso $\gamma'=\gamma_{sat}-\gamma_w$:
+\[
+\sigma'_{v,inf}=\sigma'_{v,sup}+\gamma'\Delta z.
+\]
+O aplicativo acumula a tensão entre os trechos. Abaixo, cada intervalo mostra a substituição com a espessura real do trecho.
+
+\section{Pressão de solo, sobrecarga e água}
+As parcelas laterais são somadas ponto a ponto:
+\begin{align*}
+p_s(z)&=\max\left(0,K_a\sigma'_v(z)-2c\sqrt{K_a}\right),\\
+p_q(z)&=K_aq,\\
+u(z)&=\gamma_w\max(0,z-z_{NA}),\\
+p_{total}(z)&=p_s(z)+p_q(z)+u(z).
+\end{align*}
+O operador $\max(0,\cdot)$ zera pressão de solo calculada como tração. A água é uma pressão hidrostática independente: não se deve somá-la dentro de $\sigma'_v$ e novamente em $u$.
+
+{% for trecho in trechos %}
+\section*{Trecho {{ loop.index }}: {{ trecho.nome }}}
+\addcontentsline{toc}{section}{Trecho {{ loop.index }}: {{ trecho.nome }}}
+O intervalo vai de $z_1={{ trecho.z_sup }}\,\mathrm{m}$ a $z_2={{ trecho.z_inf }}\,\mathrm{m}$, portanto $\Delta z={{ trecho.h_trecho }}\,\mathrm{m}$. Este trecho pertence à Camada {{ trecho.camada }}.
+\[
+{{ trecho.gamma_eff_substituicao }}
+\]
+\begin{align*}
+\sigma'_{v,inf}&=\sigma'_{v,sup}+\gamma'\Delta z\\
+&={{ trecho.sigma_sup }}+{{ trecho.gamma_eff }}\times({{ trecho.z_inf }}-{{ trecho.z_sup }})\\
+&={{ trecho.sigma_inf }}\,\mathrm{kPa}.
+\end{align*}
+O coeficiente de empuxo é $K_a={{ trecho.ka }}$. A pressão efetiva de solo é calculada nas duas extremidades:
+\begin{align*}
+p_{s,1}^{bruto}&=K_a\sigma'_{v,1}-2c\sqrt{K_a}
+= {{ trecho.ka }}\times{{ trecho.sigma_sup }}-2\times{{ trecho.coesao }}\sqrt{ {{ trecho.ka }} }
+= {{ trecho.p_solo_bruto_sup }}\,\mathrm{kPa},\\
+p_{s,1}&=\max(0,p_{s,1}^{bruto})={{ trecho.p_solo_sup }}\,\mathrm{kPa},\\
+p_{s,2}^{bruto}&=K_a\sigma'_{v,2}-2c\sqrt{K_a}
+= {{ trecho.ka }}\times{{ trecho.sigma_inf }}-2\times{{ trecho.coesao }}\sqrt{ {{ trecho.ka }} }
+= {{ trecho.p_solo_bruto_inf }}\,\mathrm{kPa},\\
+p_{s,2}&=\max(0,p_{s,2}^{bruto})={{ trecho.p_solo_inf }}\,\mathrm{kPa}.
+\end{align*}
+A sobrecarga uniforme produz pressão constante neste trecho:
+\[
+p_q=K_aq={{ trecho.ka }}\times{{ trecho.q }}={{ trecho.p_q }}\,\mathrm{kPa}.
+\]
+{% if entradas.z_na is none %}
+Como não há nível d'água informado, $u_1=u_2=0$ neste memorial.
+{% else %}
+A pressão da água é calculada com as profundidades abaixo do N.A. nas extremidades:
+\begin{align*}
+u_1&=\gamma_w\max(0,z_1-z_{NA})={{ trecho.gamma_w }}\max(0,{{ trecho.z_sup }}-{{ entradas.z_na }})={{ trecho.u_sup }}\,\mathrm{kPa},\\
+u_2&=\gamma_w\max(0,z_2-z_{NA})={{ trecho.gamma_w }}\max(0,{{ trecho.z_inf }}-{{ entradas.z_na }})={{ trecho.u_inf }}\,\mathrm{kPa}.
+\end{align*}
+{% endif %}
+Logo, as pressões totais nas extremidades são:
+\begin{align*}
+p_{tot,1}&=p_{s,1}+p_q+u_1={{ trecho.p_solo_sup }}+{{ trecho.p_q }}+{{ trecho.u_sup }}\\
+&={{ trecho.p_total_sup }}\,\mathrm{kPa},\\
+p_{tot,2}&=p_{s,2}+p_q+u_2={{ trecho.p_solo_inf }}+{{ trecho.p_q }}+{{ trecho.u_inf }}\\
+&={{ trecho.p_total_inf }}\,\mathrm{kPa}.
+\end{align*}
+
+\subsection*{Integração das parcelas neste trecho}
+O diagrama pressão--profundidade é linear em cada trecho. Sua área é a força horizontal por metro de muro. Quando a pressão bruta de solo muda de sinal, o programa corta a parte tracionada e integra somente o triângulo comprimido.
+\begin{align*}
+E_{s}&: & {{ trecho.integracoes.solo.formula_empuxo }}\\
+&& {{ trecho.integracoes.solo.braco_local_formula }}\\
+&& {{ trecho.integracoes.solo.formula_braco_global }}\\
+&& {{ trecho.integracoes.solo.formula_momento }}\\[4pt]
+E_{q}&: & {{ trecho.integracoes.sobrecarga.formula_empuxo }}\\
+&& {{ trecho.integracoes.sobrecarga.braco_local_formula }}\\
+&& {{ trecho.integracoes.sobrecarga.formula_braco_global }}\\
+&& {{ trecho.integracoes.sobrecarga.formula_momento }}\\[4pt]
+E_{w}&: & {{ trecho.integracoes.agua.formula_empuxo }}\\
+&& {{ trecho.integracoes.agua.braco_local_formula }}\\
+&& {{ trecho.integracoes.agua.formula_braco_global }}\\
+&& {{ trecho.integracoes.agua.formula_momento }}
+\end{align*}
+O braço global é medido desde a ponta da base até a linha de ação da força. O momento de cada parcela é $M_i=E_i y_i$.
+{% endfor %}
+
+\chapter{Leitura dos diagramas}
+O diagrama mostra profundidade na vertical e pressão na horizontal. A força correspondente a uma parcela é a área sob seu diagrama; o momento depende também da posição do centroide dessa área.
+\begin{figure}[ht]
+\centering
+{{ diagrama_solo_tikz }}
+\caption{Pressão lateral de solo.}
+\end{figure}
+\begin{figure}[ht]
+\centering
+{{ diagrama_q_tikz }}
+\caption{Pressão lateral causada pela sobrecarga.}
+\end{figure}
+\begin{figure}[ht]
+\centering
+{{ diagrama_agua_tikz }}
+\caption{Pressão hidrostática.}
+\end{figure}
+\begin{figure}[ht]
+\centering
+{{ diagrama_total_tikz }}
+\caption{Pressão lateral total usada para visualizar a soma das parcelas.}
+\end{figure}
+
+\section{Animação da composição das pressões}
+Nos visualizadores compatíveis, os controles abaixo percorrem quatro quadros: solo, sobrecarga, água e soma total. O primeiro quadro permanece como pôster estático em leitores sem suporte a animação.
+\begin{center}
+\begin{animateinline}[controls,loop,poster=first]{1}
+{{ animacao_pressao }}
+\end{animateinline}
+\end{center}
+\begin{atencao}
+A animação é um recurso opcional do PDF e depende do visualizador. Os quatro diagramas estáticos anteriores são a referência que funciona também em navegadores e leitores que não reproduzem animações embutidas.
+\end{atencao}
+
+\chapter{Equilíbrio do muro}
+\section{Peso próprio: retângulo mais triângulo}
+A seção trapezoidal é dividida em um retângulo e um triângulo. Para o retângulo, a largura é $t$; para o triângulo, a base horizontal é $b-t$. As áreas são calculadas por metro de comprimento:
+\begin{align*}
+A_{ret}&=tH={{ entradas.t }}\times{{ entradas.H }}={{ retangulo.area }}\,\mathrm{m^2},\\
+W_{ret}&=A_{ret}\gamma_c={{ retangulo.area }}\times{{ retangulo.gamma }}={{ retangulo.peso }}\,\mathrm{kN/m},\\
+x_{ret}&=b-\frac{t}{2}={{ entradas.b }}-\frac{{ entradas.t }}2={{ retangulo.braco }}\,\mathrm{m},\\
+M_{ret}&=W_{ret}x_{ret}={{ retangulo.peso }}\times{{ retangulo.braco }}={{ retangulo.momento }}\,\mathrm{kN\cdot m/m}.
+\end{align*}
+\begin{align*}
+A_{tri}&=\frac{(b-t)H}{2}=\frac{({{ entradas.b }}-{{ entradas.t }})\times{{ entradas.H }}}2={{ triangulo.area }}\,\mathrm{m^2},\\
+W_{tri}&=A_{tri}\gamma_c={{ triangulo.area }}\times{{ triangulo.gamma }}={{ triangulo.peso }}\,\mathrm{kN/m},\\
+x_{tri}&=\frac{2(b-t)}3=\frac{2({{ entradas.b }}-{{ entradas.t }})}3={{ triangulo.braco }}\,\mathrm{m},\\
+M_{tri}&=W_{tri}x_{tri}={{ triangulo.peso }}\times{{ triangulo.braco }}={{ triangulo.momento }}\,\mathrm{kN\cdot m/m}.
+\end{align*}
+Assim, o peso próprio total é $W=W_{ret}+W_{tri}={{ retangulo.peso }}+{{ triangulo.peso }}={{ resumo.peso_muro_kN_m}}\,\mathrm{kN/m}$.
+
+\section{Forças e momentos resultantes}
+Os empuxos e seus braços são somados trecho a trecho. Para o método Coulomb, o empuxo de solo e sobrecarga é decomposto conforme $\delta$; a pressão de água segue horizontalmente.
+\begin{align*}
+E_s&={{ resumo.empuxo_solo_kN_m}}\,\mathrm{kN/m},&M_s&={{ resumo.momento_solo_ponta_kNm_m}}\,\mathrm{kN\cdot m/m},\\
+E_q&={{ resumo.empuxo_sobrecarga_kN_m}}\,\mathrm{kN/m},&M_q&={{ resumo.momento_sobrecarga_ponta_kNm_m}}\,\mathrm{kN\cdot m/m},\\
+E_w&={{ resumo.empuxo_hidrostatico_kN_m}}\,\mathrm{kN/m},&M_w&={{ resumo.momento_hidrostatico_ponta_kNm_m}}\,\mathrm{kN\cdot m/m}.
+\end{align*}
+\begin{align*}
+H_{tot}&=(E_s+E_q)\cos\delta+E_w={{ resumo.componente_horizontal_total_kN_m}}\,\mathrm{kN/m},\\
+V_d&=(E_s+E_q)\sin\delta={{ resumo.componente_vertical_descendente_kN_m}}\,\mathrm{kN/m},\\
+V&=W+V_d={{ resumo.peso_muro_kN_m}}+{{ resumo.componente_vertical_descendente_kN_m}}={{ resumo.carga_vertical_total_kN_m}}\,\mathrm{kN/m},\\
+M_{tomb}&=(M_s+M_q)\cos\delta+M_w={{ resumo.momento_tombador_ponta_kNm_m}}\,\mathrm{kN\cdot m/m},\\
+M_{est}&=M_{tri}+M_{ret}+V_db={{ triangulo.momento }}+{{ retangulo.momento }}+{{ resumo.componente_vertical_descendente_kN_m}}\times{{ entradas.b }}={{ resumo.momento_estabilizador_total_kNm_m}}\,\mathrm{kN\cdot m/m}.
+\end{align*}
+
+\chapter{Verificações de estabilidade}
+\section{Tombamento}
+O fator de segurança compara momentos resistentes aos momentos tombadores, ambos em relação à ponta da base:
+\[
+FS_{tomb} = \frac{M_{est}}{M_{tomb}} = \frac{ {{ resumo.momento_estabilizador_total_kNm_m}} }{ {{ resumo.momento_tombador_ponta_kNm_m}} } = {{ checks.fator_seguranca_tombamento }}.
+\]
+Critério adotado no caso: $FS_{tomb,min}={{ entradas.fs_tomb_min}}$. Resultado do aplicativo: \textbf{ {{ status.tombamento }} }.
+
+\section{Deslizamento}
+A resistência ao deslizamento na base é $R_f=Vf$. O fator de segurança é:
+\[
+FS_{des}=\frac{Vf}{H_{tot}}=\frac{ {{ resumo.carga_vertical_total_kN_m}}\times{{ entradas.atrito_base}} }{ {{ resumo.componente_horizontal_total_kN_m}} }={{ checks.fator_seguranca_deslizamento }}.
+\]
+Critério adotado no caso: $FS_{des,min}={{ entradas.fs_des_min}}$. Resultado do aplicativo: \textbf{ {{ status.deslizamento }} }.
+
+\section{Posição da resultante e excentricidade}
+Calcula-se a posição da resultante vertical a partir da ponta e compara-se essa posição com o centro da base:
+\begin{align*}
+x_R&=\frac{M_{est}-M_{tomb}}{V}
+=\frac{ {{ resumo.momento_estabilizador_total_kNm_m}}-{{ resumo.momento_tombador_ponta_kNm_m}} }{ {{ resumo.carga_vertical_total_kN_m}} }
+= {{ checks.posicao_resultante_desde_ponta_m}}\,\mathrm{m},\\
+e&=\frac{b}{2}-x_R=\frac{ {{ entradas.b }} }2-{{ checks.posicao_resultante_desde_ponta_m}}={{ checks.excentricidade_resultante_m}}\,\mathrm{m}.
+\end{align*}
+
+\section{Tensões transmitidas à fundação}
+Quando a resultante está na faixa central da base ($|e|\le b/6$), a distribuição é trapezoidal:
+\[
+\sigma_{max,min}=\frac{V}{b}\left(1\pm\frac{6|e|}{b}\right).
+\]
+Para contato triangular, o aplicativo adota $\sigma_{min}=0$ e determina a tensão máxima a partir da posição da resultante. Neste caso, o regime informado é \textbf{ {{ status.regime }} }.
+\begin{align*}
+\sigma_{max}&={{ checks.tensao_maxima_base_kPa }}\,\mathrm{kPa},\\
+\sigma_{min}&={{ checks.tensao_minima_base_kPa }}\,\mathrm{kPa},\\
+FS_{qadm}&=\frac{q_{adm}}{\sigma_{max}}=\frac{ {{ pressao_admissivel }} }{ {{ checks.tensao_maxima_base_kPa }} }={{ checks.fator_seguranca_tensao_admissivel }}.
+\end{align*}
+Tensão admissível informada: $q_{adm}={{ entradas.qadm }}\,\mathrm{kPa}$. Resultado da verificação: \textbf{ {{ status.tensao }} }.
+
+\section{Resumo visual dos critérios}
+\begin{center}
+{{ verificacoes_tikz }}
+\end{center}
+As barras exibem os fatores calculados e as linhas tracejadas mostram os limites mínimos definidos nos campos. A leitura dos selos e dos valores deve ser feita em conjunto; um critério não substitui os demais.
+
+\chapter{Conclusão guiada e limites do modelo}
+\begin{resultado}
+Para este conjunto de entradas, o aplicativo encontrou: $FS_{tomb}={{ checks.fator_seguranca_tombamento }}$ ({{ status.tombamento }}); $FS_{des}={{ checks.fator_seguranca_deslizamento }}$ ({{ status.deslizamento }}); $\sigma_{max}={{ checks.tensao_maxima_base_kPa }}\,\mathrm{kPa}$ ({{ status.tensao }}); regime de contato {{ status.regime }}. Esses resultados respondem somente às verificações implementadas e às hipóteses listadas neste documento.
+\end{resultado}
+
+\begin{enumerate}[label=\textbf{Passo \arabic*.},leftmargin=2.4cm]
+\item Confirme a seção, as dimensões e a orientação do lado do aterro no croqui.
+\item Refaça o $K_a$ de cada material usando a teoria selecionada e os ângulos informados.
+\item Some os pesos específicos efetivos para conferir $\sigma'_v$ em cada interface e no N.A.
+\item Separe pressão de solo, sobrecarga e água; confira cada ordenada no topo e na base dos trechos.
+\item Integre cada diagrama para obter força e centroide; converta o braço local para braço desde a ponta.
+\item Some forças e momentos, decompondo o empuxo de Coulomb quando aplicável.
+\item Recalcule fatores de segurança, posição da resultante, excentricidade e tensões de contato.
+\item Compare cada resultado com o critério definido e registre quais verificações precisam de revisão.
+\end{enumerate}
+
+\begin{limite}
+Este relatório reproduz as hipóteses do modelo do aplicativo: muro rígido trapezoidal, análise por metro de comprimento e empuxo ativo pelas teorias implementadas (Rankine ou Coulomb). Não inclui empuxo passivo à frente do muro, estabilidade global do conjunto solo--muro, sismo, deformações, capacidade estrutural do concreto armado, armaduras, drenagem detalhada nem interação tridimensional. O PDF é material de estudo e conferência; projetos executivos exigem avaliação geotécnica e estrutural apropriada.
+\end{limite}
+
+\appendix
+\chapter{Símbolos e unidades}
+\begin{longtable}{>{\bfseries}l p{.76\textwidth}}
+$H$ & altura do muro; $b$ largura da base; $t$ largura do topo.\\
+$\gamma_{nat},\gamma_{sat},\gamma_w$ & pesos específicos natural, saturado do solo e da água.\\
+$\gamma'$ & peso específico efetivo usado para acumular a tensão abaixo do N.A.\\
+$c,\varphi$ & coesão e ângulo de atrito do solo; $K_a$ coeficiente de empuxo ativo.\\
+$q,\beta,\delta$ & sobrecarga, inclinação do aterro e atrito solo--muro.\\
+$p_s,p_q,u$ & pressões de solo, sobrecarga e água; $p_{total}$ soma das parcelas.\\
+$E,M,y$ & força resultante, momento e braço em relação à ponta da base.\\
+$V,H_{tot}$ & força vertical total e componente horizontal total na base.\\
+$x_R,e$ & posição da resultante e excentricidade da resultante vertical.\\
+$FS_{tomb},FS_{des}$ & fatores de segurança contra tombamento e deslizamento.\\
+$q_{adm}$ & tensão admissível informada para a fundação.\\
+\end{longtable}
+\medskip
+\noindent\textbf{Reaproveitamento dos desenhos.} O arquivo fonte \.tex é compilado para gerar este PDF e contém os blocos TikZ vetoriais do croqui, dos diagramas de pressão, do mapa de cálculo e do gráfico de verificações. Baixe-o junto com o relatório para copiar os desenhos ou adaptar cores, dimensões e rótulos.
+
+\end{document}
