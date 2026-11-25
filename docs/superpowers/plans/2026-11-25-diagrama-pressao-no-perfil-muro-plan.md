@@ -51,6 +51,8 @@
 
   **Execution note:** Python compilation and `git diff --check` passed. The local visual render could not start because the system Python lacks Plotly and the offline `uv` cache is inaccessible; the code change itself does not add dependencies. This visual check remains pending.
 
-- [ ] **Step 4: Commit and publish the scoped change**
+- [x] **Step 4: Commit and publish the scoped change**
 
   Stage only the muro page and the approved design/plan documents; leave unrelated working-tree changes untouched. Commit and push to `main`, as previously authorized.
+
+  **Execution note:** Commit `66400f6` was pushed successfully to `origin/main`. The unrelated move of `pages/05_Calculos_para_prova.py` was left unstaged.
