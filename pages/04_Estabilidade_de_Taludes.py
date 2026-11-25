@@ -1283,7 +1283,7 @@ def _mostrar_diagnostico_circulo(circulo: dict[str, Any]) -> None:
 
 
 def _mostrar_memoria_calculo() -> None:
-    with st.expander("Guia de símbolos e equações"):
+    with st.expander("4.1. Guia de símbolos e equações"):
         st.markdown(
             "**Geometria:** H é a altura; H:V é a relação horizontal/vertical da face; "
             "β é a inclinação do terreno a montante; a é a distância da crista até a entrada; "
@@ -1374,7 +1374,7 @@ with coluna_referencia:
     st.caption("Exemplo: H = 8 m · H:V = 1,5 · N.A. a 7,8 m da crista · 20 fatias")
 
 with st.container(border=True):
-    st.subheader("Geometria, água e discretização")
+    st.subheader("1. Geometria, água e discretização")
     entradas_atuais_croqui = _capturar_dados_dos_widgets()
     resultado_croqui = None
     if not validar_entradas_talude(entradas_atuais_croqui):
@@ -1446,7 +1446,7 @@ if not erros_formulario_geometria:
     )
 
 with st.container(border=True):
-    st.subheader("Propriedades das camadas")
+    st.subheader("1.1. Propriedades das camadas")
     st.caption("A camada 1 fica acima da interface; a camada 2 fica abaixo. Para solo homogêneo, repita os parâmetros nas duas camadas.")
     coluna_camada_superior, coluna_camada_inferior = st.columns(2)
     with coluna_camada_superior:
@@ -1488,7 +1488,7 @@ with st.container(border=True):
             key="angulo_atrito_efetivo_camada_inferior_graus",
         )
 
-with st.expander("Raios candidatos (gerados a partir de d/2; editáveis)"):
+with st.expander("2. Busca de círculos — raios candidatos"):
     st.caption("Os raios do exemplo da planilha usam incrementos diferentes. Gere novamente após mudar a geometria, ou ajuste cada raio.")
     st.button("Gerar raios padrão para esta geometria", on_click=_regenerar_raios_padrao)
     colunas_raios = st.columns(5)
@@ -1647,7 +1647,7 @@ else:
                     st.code(pacote_documentos["erro_pdf"], language="text")
 
     st.divider()
-    st.subheader("Comparação dos círculos candidatos")
+    st.subheader("2.1. Comparação dos círculos candidatos")
     linhas_circulos = [
         {
             "ID": circulo["identificacao"],
@@ -1701,7 +1701,7 @@ else:
     else:
         st.warning("Nenhum dos raios candidatos produziu um círculo válido por Fellenius.")
 
-    st.subheader("Fator de segurança por raio")
+    st.subheader("2.2. Fator de segurança por raio")
     st.caption("O contorno destaca o círculo crítico de cada método.")
     limite_fs_grafico = st.slider(
         "Limite superior do eixo FS", min_value=1.0, max_value=20.0, value=5.0, step=0.5
@@ -1715,11 +1715,13 @@ else:
 
     if circulo_desenhado:
         _mostrar_diagnostico_circulo(circulo_desenhado)
-        st.subheader(f"Perfil e círculo · {circulo_desenhado['identificacao']}")
+        st.subheader(f"2.3. Perfil e círculo · {circulo_desenhado['identificacao']}")
         _mostrar_grafico_geometria(entradas_talude, resultado_talude, circulo_desenhado)
 
         bishop = circulo_desenhado["bishop"]
-        with st.expander(f"Bishop Simplificado · {circulo_desenhado['identificacao']}"):
+        with st.expander(
+            f"3. Bishop Simplificado — círculo crítico · {circulo_desenhado['identificacao']}"
+        ):
             st.write(f"**{bishop['situacao']}**")
             st.latex(
                 r"FS_{k+1}=\frac{\sum_i[c'_i b_i+(W_i-u_i b_i)\tan\varphi'_i]/m_{\alpha,i}}"
@@ -1730,8 +1732,26 @@ else:
             if bishop["historico"]:
                 st.dataframe(bishop["historico"], hide_index=True, width="stretch")
 
+    st.subheader("4. Fellenius e Bishop Simplificado — hipóteses, resultados e limitações")
+    _mostrar_memoria_calculo()
+    st.caption(
+        "Escopo: ruptura circular por Fellenius e Bishop Simplificado, N.A. horizontal e até duas camadas. "
+        "Superfícies não circulares, sismo, fluxo não hidrostático "
+        "e busca automática dos pontos de entrada e saída estão fora do escopo."
+    )
+    with st.expander("4.2. Memorial passo a passo — como fazer o cálculo à mão"):
+        st.markdown(
+            montar_memorial_passo_a_passo_talude(
+                entradas_talude, resultado_talude, circulo_desenhado
+            )
+        )
+
+    if circulo_desenhado:
+        st.subheader(
+            f"5. Detalhamento geométrico e forças por fatia · {circulo_desenhado['identificacao']}"
+        )
         if circulo_desenhado["fatias"]:
-            st.subheader(f"Gráficos por fatia · {circulo_desenhado['identificacao']}")
+            st.subheader(f"5.1. Gráficos por fatia · {circulo_desenhado['identificacao']}")
             st.caption(
                 "Cada gráfico mostra uma parte do cálculo. Use o ícone de câmera ao passar o mouse "
                 "sobre qualquer gráfico para baixar sua imagem PNG."
@@ -1750,19 +1770,7 @@ else:
                 )
                 _mostrar_grafico_forcas_por_fatia(circulo_desenhado["fatias"])
 
-            st.subheader(f"Memória das fatias · {circulo_desenhado['identificacao']}")
+            st.subheader(f"5.2. Memória das fatias · {circulo_desenhado['identificacao']}")
             _mostrar_tabela_fatias(circulo_desenhado["fatias"])
         else:
             st.info("Este raio é menor que d/2; não existe círculo para dividir em fatias.")
-    _mostrar_memoria_calculo()
-    st.caption(
-        "Escopo: ruptura circular por Fellenius e Bishop Simplificado, N.A. horizontal e até duas camadas. "
-        "Superfícies não circulares, sismo, fluxo não hidrostático "
-        "e busca automática dos pontos de entrada e saída estão fora do escopo."
-    )
-    with st.expander("Memorial passo a passo · como fazer o cálculo à mão"):
-        st.markdown(
-            montar_memorial_passo_a_passo_talude(
-                entradas_talude, resultado_talude, circulo_desenhado
-            )
-        )
