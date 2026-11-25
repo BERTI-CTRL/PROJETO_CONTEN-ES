@@ -371,21 +371,6 @@ def _mostrar_croqui_entrada_talude(
         deslocamento_rotulo=(-altura * 0.8, 0),
     )
 
-    beta = float(entradas_talude["inclinacao_terreno_montante_graus"])
-    x_beta = largura_face + max(0.45 * (x_entrada - largura_face), altura * 0.18)
-    figura.add_annotation(
-        x=x_beta,
-        y=cota_terreno(x_beta),
-        text=f"β = {beta:g}°",
-        showarrow=True,
-        arrowhead=2,
-        ax=30,
-        ay=-28,
-        bgcolor="rgba(255,255,255,0.92)",
-        bordercolor="#398e79",
-        borderpad=3,
-        font={"color": "#176452", "size": 11},
-    )
     x_face_label = largura_face * 0.5
     figura.add_annotation(
         x=x_face_label,
@@ -406,7 +391,8 @@ def _mostrar_croqui_entrada_talude(
             float(cota_agua),
             f"zNA = {float(entradas_talude['profundidade_nivel_agua_abaixo_crista_m']):g} m",
             cor="#367da8",
-            deslocamento_rotulo=(-0.55, 0),
+            # Afasta a cota de zNA da cota H, que tem o mesmo ponto médio.
+            deslocamento_rotulo=(-0.55, -altura * 0.22),
         )
         figura.add_annotation(
             x=x_max - altura * 0.08,
@@ -485,54 +471,28 @@ def _mostrar_croqui_entrada_talude(
             deslocamento_rotulo=(0, -altura * 0.08),
         )
 
-    x_meio_fatias = (x_saida + x_entrada) / 2
-    figura.add_annotation(
-        x=x_meio_fatias,
-        y=cota_terreno(x_meio_fatias),
-        text=f"n = {int(entradas_talude['quantidade_fatias'])} fatias",
-        showarrow=True,
-        arrowhead=2,
-        ax=0,
-        ay=-34,
-        bgcolor="rgba(255,255,255,0.92)",
-        bordercolor="#82918f",
-        borderpad=3,
-        font={"color": "#596a77", "size": 10},
-    )
-
     figura.add_annotation(
         x=x_saida,
         y=0,
-        text="Saída",
+        text="<b>S</b>",
         showarrow=True,
         arrowhead=2,
-        ax=-20,
-        ay=28,
+        ax=-34,
+        ay=-24,
         font={"color": "#bd5948", "size": 10},
     )
     figura.add_annotation(
         x=x_entrada,
         y=float(geometria["cota_entrada_m"]),
-        text=f"Entrada E ({x_entrada:g}; {float(geometria['cota_entrada_m']):g}) m",
+        text="<b>E</b>",
         showarrow=True,
         arrowhead=2,
-        ax=45,
-        ay=-24,
+        ax=70,
+        ay=-45,
         bgcolor="rgba(255,255,255,0.92)",
         bordercolor="#bd5948",
         borderpad=3,
         font={"color": "#bd5948", "size": 9},
-    )
-    figura.add_annotation(
-        x=largura_face,
-        y=altura,
-        text="Crista",
-        showarrow=True,
-        arrowhead=2,
-        ax=24,
-        ay=-28,
-        bgcolor="rgba(255,255,255,0.92)",
-        font={"color": "#17374c", "size": 9},
     )
     coluna_figura, coluna_simbolos = st.columns([2.35, 1], vertical_alignment="center")
     with coluna_figura:
@@ -556,6 +516,24 @@ def _mostrar_croqui_entrada_talude(
             config={"displayModeBar": False, "responsive": True},
         )
     with coluna_simbolos:
+        profundidade_na = entradas_talude.get(
+            "profundidade_nivel_agua_abaixo_crista_m"
+        )
+        texto_nivel_agua = (
+            f"zNA = {float(profundidade_na):g} m abaixo da crista"
+            if profundidade_na is not None
+            else "sem nível d'água informado"
+        )
+        texto_geometria = (
+            f"H = {altura:g} m · H:V = {relacao_face:g}:1 · "
+            f"β = {float(entradas_talude['inclinacao_terreno_montante_graus']):g}°\n\n"
+            f"a = {float(entradas_talude['distancia_crista_entrada_m']):g} m · "
+            f"Lᵦ = {float(entradas_talude['distancia_pe_saida_m']):g} m · "
+            f"h₁ = {float(entradas_talude['espessura_camada_superior_m']):g} m · "
+            f"{texto_nivel_agua}\n\n"
+            f"Saída S = ({x_saida:g}; 0) m · "
+            f"Entrada E = ({x_entrada:g}; {float(geometria['cota_entrada_m']):g}) m"
+        )
         raios_candidatos = " · ".join(
             _formatar_numero(float(raio), 2)
             for raio in entradas_talude["raios_candidatos_m"]
@@ -593,8 +571,7 @@ def _mostrar_croqui_entrada_talude(
         st.markdown(
             "**Referências e valores**\n\n"
             "**GEOMETRIA**\n\n"
-            "H: altura · H:V: face · β: terreno a montante · a: crista–entrada · "
-            "Lᵦ: pé–saída · h₁: camada superior · zNA: profundidade do N.A. · "
+            f"{texto_geometria}\n\n"
             f"γw = {float(entradas_talude['peso_especifico_agua_kN_m3']):g} kN/m³\n\n"
             "**SOLO**\n\n"
             f"{parametros_camadas[0]}\n\n{parametros_camadas[1]}\n\n"
