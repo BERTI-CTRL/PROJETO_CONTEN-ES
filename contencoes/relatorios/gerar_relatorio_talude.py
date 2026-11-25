@@ -244,7 +244,7 @@ def _gerar_croqui_tikz(
                 )
         linhas.extend([
             rf"\draw[<->,blue!75!black] ({_decimal_tikz(x_saida)},-.62) -- ({_decimal_tikz(x_entrada)},-.62) node[midway,below,fill=white,inner sep=1pt] {{$d={_formatar_numero_tex(float(geometria['distancia_entre_entrada_e_saida_m']))}\,\mathrm{{m}}$}};",
-            rf"\node[above left,red!75!black,fill=white,inner sep=1pt] at ({_decimal_tikz(x_inicio)},{_decimal_tikz(float(circulo['fatias'][0]['cota_base_inicial_m']) if circulo.get('fatias') and circulo['fatias'][0].get('cota_base_inicial_m') is not None else 0.0)}) {{$S$}};",
+            rf"\node[above right,red!75!black,fill=white,inner sep=1pt] at ({_decimal_tikz(x_inicio)},{_decimal_tikz(float(circulo['fatias'][0]['cota_base_inicial_m']) if circulo.get('fatias') and circulo['fatias'][0].get('cota_base_inicial_m') is not None else 0.0)}) {{$S$}};",
         ])
     linhas.append(r"\end{tikzpicture}")
     return "\n".join(linhas)
