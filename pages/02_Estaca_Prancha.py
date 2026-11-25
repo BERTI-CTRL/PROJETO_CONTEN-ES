@@ -2,11 +2,16 @@ from __future__ import annotations
 
 import json
 from copy import deepcopy
+from functools import partial
 from typing import Any
 
 import streamlit as st
 from streamlit_local_storage import LocalStorage
 
+from contencoes.cad.exportar_estaca_prancha_dxf import (
+    gerar_dxf_cortina_em_balanco,
+    gerar_dxf_cortina_ancorada,
+)
 from contencoes.calculos.calculos_estaca_prancha import (
     calcular_cortina_ancorada,
     calcular_cortina_em_balanco,
@@ -224,6 +229,14 @@ with aba_balanco:
             gerar_svg_cortina_em_balanco(entradas_balanco, resultado_balanco),
             unsafe_allow_html=True,
         )
+        st.download_button(
+            "Baixar corte em DXF",
+            data=partial(gerar_dxf_cortina_em_balanco, entradas_balanco, resultado_balanco),
+            file_name="cortina_em_balanco.dxf",
+            mime="application/dxf",
+            key="dxf_estaca_prancha_balanco",
+            on_click="ignore",
+        )
         st.divider()
         st.subheader("Resultados da ficha")
         colunas_resultado_balanco = st.columns(4)
@@ -340,6 +353,14 @@ with aba_ancorada:
         croqui_ancorada.markdown(
             gerar_svg_cortina_ancorada(entradas_ancorada, resultado_ancorada),
             unsafe_allow_html=True,
+        )
+        st.download_button(
+            "Baixar corte em DXF",
+            data=partial(gerar_dxf_cortina_ancorada, entradas_ancorada, resultado_ancorada),
+            file_name="cortina_ancorada.dxf",
+            mime="application/dxf",
+            key="dxf_estaca_prancha_ancorada",
+            on_click="ignore",
         )
         st.divider()
         st.subheader("Resultados da cortina ancorada")

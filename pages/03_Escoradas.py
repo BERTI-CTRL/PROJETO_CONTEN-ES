@@ -3,12 +3,19 @@ from __future__ import annotations
 import json
 import math
 from copy import deepcopy
+from functools import partial
 from typing import Any
 
 import plotly.graph_objects as go
 import streamlit as st
 from streamlit_local_storage import LocalStorage
 
+from contencoes.cad.exportar_escoradas_dxf import (
+    gerar_dxf_pressao_aparente,
+    gerar_dxf_ruptura_fundo,
+    gerar_dxf_graux,
+    gerar_dxf_froehlich,
+)
 from contencoes.calculos.calculos_escoradas import (
     MODELOS_ENVOLTORIA,
     calcular_froehlich,
@@ -286,6 +293,14 @@ with aba_pressao:
     else:
         resultado_pressao = calcular_pressao_aparente(entradas_pressao)
         croqui_pressao.markdown(gerar_svg_pressao_aparente(entradas_pressao), unsafe_allow_html=True)
+        st.download_button(
+            "Baixar corte em DXF",
+            data=partial(gerar_dxf_pressao_aparente, entradas_pressao),
+            file_name="pressao_aparente.dxf",
+            mime="application/dxf",
+            key="dxf_escoradas_pressao",
+            on_click="ignore",
+        )
         st.divider()
         colunas_resultados = st.columns(5)
         colunas_resultados[0].metric(
@@ -408,6 +423,14 @@ with aba_fundo:
     else:
         resultado_fundo = calcular_ruptura_fundo(entradas_fundo)
         croqui_fundo.markdown(gerar_svg_ruptura_fundo(entradas_fundo), unsafe_allow_html=True)
+        st.download_button(
+            "Baixar corte em DXF",
+            data=partial(gerar_dxf_ruptura_fundo, entradas_fundo),
+            file_name="ruptura_fundo.dxf",
+            mime="application/dxf",
+            key="dxf_escoradas_fundo",
+            on_click="ignore",
+        )
         colunas_resultado_fundo = st.columns(4)
         colunas_resultado_fundo[0].metric(
             "Tensão solicitante no fundo, σz",
@@ -489,6 +512,14 @@ with aba_graux:
     else:
         resultado_graux = calcular_graux(entradas_graux)
         croqui_graux.markdown(gerar_svg_graux(entradas_graux), unsafe_allow_html=True)
+        st.download_button(
+            "Baixar corte em DXF",
+            data=partial(gerar_dxf_graux, entradas_graux),
+            file_name="graux.dxf",
+            mime="application/dxf",
+            key="dxf_escoradas_graux",
+            on_click="ignore",
+        )
         colunas_resultado_graux = st.columns(4)
         colunas_resultado_graux[0].metric(
             "Comprimento de percolação, L",
@@ -563,6 +594,14 @@ with aba_froehlich:
     else:
         resultado_froehlich = calcular_froehlich(entradas_froehlich)
         croqui_froehlich.markdown(gerar_svg_froehlich(entradas_froehlich, resultado_froehlich), unsafe_allow_html=True)
+        st.download_button(
+            "Baixar corte em DXF",
+            data=partial(gerar_dxf_froehlich, entradas_froehlich, resultado_froehlich),
+            file_name="froehlich.dxf",
+            mime="application/dxf",
+            key="dxf_escoradas_froehlich",
+            on_click="ignore",
+        )
         colunas_resultado_froehlich = st.columns(3)
         colunas_resultado_froehlich[0].metric(
             "Profundidade crítica teórica, Hcr",
