@@ -143,7 +143,12 @@ def _gerar_croqui_tikz(
     y_minimo = -0.5 * altura
     if tem_centro_circular:
         y_minimo = min(y_minimo, centro_y - raio - 0.7)
-    y_maximo = max(altura, float(geometria["cota_entrada_m"])) + 0.9
+    # O centro do círculo pode ficar bem acima da crista; inclua-o no croqui.
+    y_maximo = max(
+        altura,
+        float(geometria["cota_entrada_m"]),
+        centro_y if tem_centro_circular else 0.0,
+    ) + 0.9
     escala = min(0.72, 13.2 / max(x_maximo - x_minimo, 1.0), 8.3 / max(y_maximo - y_minimo, 1.0))
 
     linhas = [
@@ -190,7 +195,7 @@ def _gerar_croqui_tikz(
     linhas.extend([
         rf"\draw[very thick,verde] ({_decimal_tikz(x_minimo)},0) -- (0,0) -- ({_decimal_tikz(fim_face)},{_decimal_tikz(altura)}) -- ({_decimal_tikz(x_maximo)},{_decimal_tikz(float(geometria['cota_entrada_m']) + (x_maximo - x_entrada) * math.tan(math.radians(float(entradas['inclinacao_terreno_montante_graus']))) if x_maximo > x_entrada else float(geometria['cota_entrada_m']))});",
         rf"\draw[<->,thick] (-.38,0) -- (-.38,{_decimal_tikz(altura)}) node[midway,left,fill=white,inner sep=1pt] {{$H={_formatar_numero_tex(altura)}\,\mathrm{{m}}$}};",
-        rf"\draw[<->,thick] (0,-.22) -- ({_decimal_tikz(fim_face)},-.22) node[midway,below,fill=white,inner sep=1pt] {{$H:V={_formatar_numero_tex(float(entradas['relacao_horizontal_vertical_face']))}:1$}};",
+        rf"\draw[<->,thick] (0,-.22) -- ({_decimal_tikz(fim_face)},-.22) node[midway,above,fill=white,inner sep=1pt] {{$H:V={_formatar_numero_tex(float(entradas['relacao_horizontal_vertical_face']))}:1$}};",
         rf"\fill[verde] (0,0) circle (1.2pt) node[below left] {{Pé}};",
         rf"\fill[verde] ({_decimal_tikz(fim_face)},{_decimal_tikz(altura)}) circle (1.2pt) node[above left] {{Crista}};",
         rf"\fill[azul] ({_decimal_tikz(x_entrada)},{_decimal_tikz(float(geometria['cota_entrada_m']))}) circle (1.2pt) node[above right,fill=white,inner sep=1pt] {{$E=({_formatar_numero_tex(x_entrada)}; {_formatar_numero_tex(float(geometria['cota_entrada_m']))})$}};",
@@ -224,7 +229,7 @@ def _gerar_croqui_tikz(
         linhas.extend([
             rf"\draw[red!75!black,very thick] {caminho_arco};",
             rf"\fill[red!75!black] ({_decimal_tikz(centro_x)},{_decimal_tikz(centro_y)}) circle (1.5pt) node[above right,fill=white,inner sep=1pt] {{$C=({_formatar_numero_tex(centro_x)}; {_formatar_numero_tex(centro_y)})$}};",
-            rf"\draw[<->,red!75!black] ({_decimal_tikz(centro_x)},{_decimal_tikz(centro_y)}) -- ({_decimal_tikz(x_inicio)},{_decimal_tikz(centro_y - math.sqrt(max(0.0, raio**2 - (x_inicio - centro_x) ** 2)))}) node[midway,above,fill=white,inner sep=1pt] {{$R={_formatar_numero_tex(raio)}\,\mathrm{{m}}$}};",
+            rf"\draw[<->,red!75!black] ({_decimal_tikz(centro_x)},{_decimal_tikz(centro_y)}) -- ({_decimal_tikz(x_inicio)},{_decimal_tikz(centro_y - math.sqrt(max(0.0, raio**2 - (x_inicio - centro_x) ** 2)))}) node[midway,above right,xshift=4pt,fill=white,inner sep=1pt] {{$R={_formatar_numero_tex(raio)}\,\mathrm{{m}}$}};",
         ])
         for fatia in circulo.get("fatias", []):
             x1 = float(fatia["x_inicial_m"])
@@ -239,7 +244,7 @@ def _gerar_croqui_tikz(
                 )
         linhas.extend([
             rf"\draw[<->,blue!75!black] ({_decimal_tikz(x_saida)},-.62) -- ({_decimal_tikz(x_entrada)},-.62) node[midway,below,fill=white,inner sep=1pt] {{$d={_formatar_numero_tex(float(geometria['distancia_entre_entrada_e_saida_m']))}\,\mathrm{{m}}$}};",
-            rf"\node[below left,red!75!black,fill=white,inner sep=1pt] at ({_decimal_tikz(x_inicio)},{_decimal_tikz(float(circulo['fatias'][0]['cota_base_inicial_m']) if circulo.get('fatias') and circulo['fatias'][0].get('cota_base_inicial_m') is not None else 0.0)}) {{$S$}};",
+            rf"\node[above left,red!75!black,fill=white,inner sep=1pt] at ({_decimal_tikz(x_inicio)},{_decimal_tikz(float(circulo['fatias'][0]['cota_base_inicial_m']) if circulo.get('fatias') and circulo['fatias'][0].get('cota_base_inicial_m') is not None else 0.0)}) {{$S$}};",
         ])
     linhas.append(r"\end{tikzpicture}")
     return "\n".join(linhas)
@@ -255,6 +260,7 @@ def _gerar_grafico_fs_tikz(circulos: list[dict[str, Any]]) -> str:
     ]
     limite = max(valores, default=1.0) * 1.12
     largura = 9.0
+    espacamento_linha = 0.68
     escala = largura / limite
     linhas = [
         r"\begin{tikzpicture}[x=1cm,y=1cm,>=Stealth,every node/.style={font=\scriptsize}]",
@@ -264,16 +270,16 @@ def _gerar_grafico_fs_tikz(circulos: list[dict[str, Any]]) -> str:
         valor = limite * indice / 5
         x = valor * escala
         linhas.extend([
-            rf"\draw[gray!25] ({_decimal_tikz(x)},.12) -- ({_decimal_tikz(x)},{_decimal_tikz(len(circulos) * .53 + .35)});",
+            rf"\draw[gray!25] ({_decimal_tikz(x)},.12) -- ({_decimal_tikz(x)},{_decimal_tikz(len(circulos) * espacamento_linha + .35)});",
             rf"\node[below] at ({_decimal_tikz(x)},0) {{{_formatar_numero_tex(valor, 1)}}};",
         ])
     for indice, circulo in enumerate(circulos):
-        y = (len(circulos) - indice - 1) * .53 + .16
+        y = (len(circulos) - indice - 1) * espacamento_linha + .16
         identificacao = _escapar_tex(circulo["identificacao"])
         linhas.append(rf"\node[anchor=east] at (-.12,{_decimal_tikz(y + .12)}) {{{identificacao}}};")
         for deslocamento, chave, cor, sigla in (
-            (0.04, "fator_seguranca", "verde", "Fellenius"),
-            (0.22, None, "azul", "Bishop"),
+            (0.02, "fator_seguranca", "verde", "Fellenius"),
+            (0.34, None, "azul", "Bishop"),
         ):
             valor = (
                 circulo.get(chave)
