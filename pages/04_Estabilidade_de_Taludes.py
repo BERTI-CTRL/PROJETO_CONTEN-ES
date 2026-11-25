@@ -359,7 +359,7 @@ def _mostrar_croqui_entrada_talude(
         x_entrada,
         altura + altura * 0.16,
         f"a = {float(entradas_talude['distancia_crista_entrada_m']):g} m",
-        deslocamento_rotulo=(0, altura * 0.07),
+        deslocamento_rotulo=(0, -altura * 0.05),
     )
     indicar_dimensao(
         largura_face,
@@ -487,8 +487,8 @@ def _mostrar_croqui_entrada_talude(
         text="<b>E</b>",
         showarrow=True,
         arrowhead=2,
-        ax=70,
-        ay=-45,
+        ax=55,
+        ay=-18,
         bgcolor="rgba(255,255,255,0.92)",
         bordercolor="#bd5948",
         borderpad=3,
