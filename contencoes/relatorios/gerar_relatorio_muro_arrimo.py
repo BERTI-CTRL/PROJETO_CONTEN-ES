@@ -359,82 +359,390 @@ def _tikz_geometria(
     return "\n".join(comandos)
 
 
+def _series_pressao(
+    resultado: dict[str, Any], nome: str
+) -> list[tuple[float, float, float, float]]:
+    """Converte os pontos já calculados pelo modelo em segmentos contínuos."""
+    pontos = resultado["diagramas_pressao"][nome]
+    segmentos: list[tuple[float, float, float, float]] = []
+    for ponto_1, ponto_2 in zip(pontos, pontos[1:]):
+        z_1 = float(ponto_1["profundidade_m"])
+        z_2 = float(ponto_2["profundidade_m"])
+        if z_2 - z_1 <= 1e-12:
+            continue
+        segmentos.append((
+            z_1,
+            z_2,
+            max(0.0, float(ponto_1["pressao_kPa"])),
+            max(0.0, float(ponto_2["pressao_kPa"])),
+        ))
+    return segmentos
+
+
+def _pressao_maxima_comum(resultado: dict[str, Any]) -> float:
+    pontos = resultado["diagramas_pressao"]["total"]
+    return max((float(ponto["pressao_kPa"]) for ponto in pontos), default=1.0) or 1.0
+
+
+def _escala_vertical_pressao(altura: float) -> float:
+    """Mantém os diagramas legíveis sem deixá-los dominar páginas inteiras."""
+    return min(0.78, 4.4 / max(altura, 1e-9))
+
+
+def _eixos_pressao_tikz(altura: float, largura: float, pressao_maxima: float) -> list[str]:
+    """Desenha eixos comuns; o eixo vertical é cota a partir da base do muro."""
+    linhas = [
+        rf"\draw[->] (0,-.42) -- (0,{_decimal_tikz(altura + .55)}) "
+        r"node[above left,font=\scriptsize] {Cota $y$ (m)};",
+        rf"\draw[->] (0,-.42) -- ({_decimal_tikz(largura + .25)},-.42);",
+    ]
+    for fracao in (0.0, 0.5, 1.0):
+        y = altura * fracao
+        x = largura * fracao
+        linhas.extend([
+            rf"\draw[gray!25] (0,{_decimal_tikz(y)}) -- ({_decimal_tikz(largura)},{_decimal_tikz(y)});",
+            rf"\node[left=2pt,font=\scriptsize] at (0,{_decimal_tikz(y)}) "
+            + rf"{{{_numero(altura * fracao)}}};",
+            rf"\draw[gray!25] ({_decimal_tikz(x)},0) -- ({_decimal_tikz(x)},{_decimal_tikz(altura)});",
+            rf"\draw[gray!45] ({_decimal_tikz(x)},-.42) -- ({_decimal_tikz(x)},-.34);",
+            rf"\node[below=4pt,font=\scriptsize] at ({_decimal_tikz(x)},-.42) "
+            + rf"{{{_numero(pressao_maxima * fracao, 1)}}};",
+        ])
+    linhas.append(
+        rf"\node[font=\scriptsize] at ({_decimal_tikz(largura / 2)},-1.55) {{Pressão (kPa)}};"
+    )
+    return linhas
+
+
+def _serie_pressao_tikz(
+    resultado: dict[str, Any],
+    nome: str,
+    cor: str,
+    altura: float,
+    escala_pressao: float,
+    preencher: bool = True,
+    largura_linha: float = 1.25,
+) -> list[str]:
+    linhas: list[str] = []
+    for z_1, z_2, p_1, p_2 in _series_pressao(resultado, nome):
+        y_1, y_2 = altura - z_1, altura - z_2
+        x_1, x_2 = p_1 * escala_pressao, p_2 * escala_pressao
+        if preencher:
+            linhas.append(
+                rf"\fill[{cor},opacity=.10] (0,{_decimal_tikz(y_1)}) -- "
+                + f"({_decimal_tikz(x_1)},{_decimal_tikz(y_1)}) -- "
+                + f"({_decimal_tikz(x_2)},{_decimal_tikz(y_2)}) -- "
+                + f"(0,{_decimal_tikz(y_2)}) -- cycle;"
+            )
+        linhas.append(
+            rf"\draw[{cor},line width={_decimal_tikz(largura_linha)}pt] "
+            + f"({_decimal_tikz(x_1)},{_decimal_tikz(y_1)}) -- "
+            + f"({_decimal_tikz(x_2)},{_decimal_tikz(y_2)});"
+        )
+    return linhas
+
+
 def _tikz_diagrama_pressao(
     entradas: dict[str, Any], resultado: dict[str, Any], nome: str, cor: str
 ) -> str:
-    h = float(entradas["altura_muro_m"])
-    conjuntos: list[tuple[float, float, float, float]] = []
-    chaves = {
-        "solo": ("pressao_solo_superior_kPa", "pressao_solo_inferior_kPa"),
-        "sobrecarga": ("pressao_sobrecarga_kPa", "pressao_sobrecarga_kPa"),
-        "agua": ("pressao_agua_superior_kPa", "pressao_agua_inferior_kPa"),
-        "total": (None, None),
-    }
-    for trecho in resultado["trechos"]:
-        z1 = float(trecho["profundidade_superior_m"])
-        z2 = float(trecho["profundidade_inferior_m"])
-        if nome == "total":
-            p1 = float(trecho["pressao_solo_superior_kPa"] + trecho["pressao_sobrecarga_kPa"] + trecho["pressao_agua_superior_kPa"])
-            p2 = float(trecho["pressao_solo_inferior_kPa"] + trecho["pressao_sobrecarga_kPa"] + trecho["pressao_agua_inferior_kPa"])
-        else:
-            k1, k2 = chaves[nome]
-            p1, p2 = float(trecho[k1]), float(trecho[k2])
-        conjuntos.append((z1, z2, max(0.0, p1), max(0.0, p2)))
-    max_pressao = max((max(p1, p2) for _, _, p1, p2 in conjuntos), default=1.0)
-    max_pressao = max(max_pressao, 1e-6)
-    largura = 4.3
-    escala = largura / max_pressao
+    altura = float(entradas["altura_muro_m"])
+    largura = 5.0
+    pressao_maxima = _pressao_maxima_comum(resultado)
+    escala_pressao = largura / pressao_maxima
     linhas = [
-        rf"\begin{{tikzpicture}}[x=1cm,y=0.85cm,>=Stealth]",
-        rf"\draw[->] (0,-.35) -- (0,{_decimal_tikz(h + .5)}) node[above] {{$z$}};",
-        rf"\draw[->] (0,-.35) -- ({_decimal_tikz(largura + .45)},-.35) node[right] {{Pressão (kPa)}};",
-        rf"\foreach \y/\lab in {{0/0,{_decimal_tikz(h / 2)}/{_numero(h / 2)}, {_decimal_tikz(h)}/{_numero(h)}}} "
-        rf"\draw[gray!25] (0,\y) -- ({_decimal_tikz(largura)},\y) node[left=2pt,font=\scriptsize] {{\lab}};",
+        rf"\begin{{tikzpicture}}[x=1cm,y={_decimal_tikz(_escala_vertical_pressao(altura))}cm,>=Stealth]"
     ]
-    for z1, z2, p1, p2 in conjuntos:
-        y1, y2 = h - z1, h - z2
-        x1, x2 = p1 * escala, p2 * escala
-        linhas.append(
-            rf"\fill[{cor},opacity=.12] (0,{_decimal_tikz(y1)}) -- "
-            + f"({_decimal_tikz(x1)},{_decimal_tikz(y1)}) -- "
-            + f"({_decimal_tikz(x2)},{_decimal_tikz(y2)}) -- (0,{_decimal_tikz(y2)}) -- cycle;"
-        )
-        linhas.append(
-            rf"\draw[{cor},line width=1.25pt] (0,{_decimal_tikz(y1)}) -- "
-            + f"({_decimal_tikz(x1)},{_decimal_tikz(y1)}) -- ({_decimal_tikz(x2)},{_decimal_tikz(y2)}) -- "
-            + f"(0,{_decimal_tikz(y2)});"
-        )
+    linhas.extend(_eixos_pressao_tikz(altura, largura, pressao_maxima))
+    linhas.extend(_serie_pressao_tikz(
+        resultado, nome, cor, altura, escala_pressao
+    ))
     linhas.append(r"\end{tikzpicture}")
     return "\n".join(linhas)
 
 
 def _animacao_pressao(entradas: dict[str, Any], resultado: dict[str, Any]) -> str:
-    """Cria quatro quadros LaTeX que mostram a soma dos diagramas de pressão."""
-    h = float(entradas["altura_muro_m"])
-    chaves = ("solo", "sobrecarga", "agua", "total")
-    cores = {"solo": "blue!70!black", "sobrecarga": "orange!90!black", "agua": "cyan!60!black", "total": "red!80!black"}
-    rótulos = {"solo": "Solo", "sobrecarga": "Sobrecarga", "agua": "Água", "total": "Pressão total"}
+    """Mostra as parcelas no mesmo sistema de eixos, sem redesenhar os rótulos."""
+    altura = float(entradas["altura_muro_m"])
+    largura = 5.0
+    pressao_maxima = _pressao_maxima_comum(resultado)
+    escala_pressao = largura / pressao_maxima
+    componentes = ("solo", "sobrecarga", "agua")
+    cores = {"solo": "blue!70!black", "sobrecarga": "orange!85!black", "agua": "cyan!60!black"}
+    nomes = {"solo": "Solo", "sobrecarga": "Sobrecarga", "agua": "Água"}
     frames: list[str] = []
-    for indice, chave in enumerate(chaves):
-        camadas_ativas = chaves[:indice + 1]
-        ytop = h + 0.5
-        quadro = [
-            r"\begin{tikzpicture}[x=1cm,y=.8cm,>=Stealth]",
-            rf"\draw[->] (0,0) -- (0,{_decimal_tikz(ytop)}) node[above] {{Cota}};",
-            r"\draw[->] (0,0) -- (5.1,0) node[right] {Pressão};",
+    for indice in range(4):
+        linhas = [
+            rf"\begin{{tikzpicture}}[x=1cm,y={_decimal_tikz(_escala_vertical_pressao(altura))}cm,>=Stealth]"
         ]
-        for camada in camadas_ativas:
-            codigo = _tikz_diagrama_pressao(entradas, resultado, camada, cores[camada])
-            # O desenho da própria figura traz eixos; recortamos somente os preenchimentos.
-            comandos = [linha for linha in codigo.splitlines() if "\\fill[" in linha or "\\draw[" in linha and "--" in linha]
-            quadro.extend(comandos)
-        quadro.append(
-            rf"\node[anchor=west,font=\large\bfseries] at (0,{_decimal_tikz(h + .85)}) "
-            + rf"{{Etapa {indice + 1}: {rótulos[chave]}}};"
+        linhas.extend(_eixos_pressao_tikz(altura, largura, pressao_maxima))
+        componentes_ativos = componentes[:min(indice + 1, len(componentes))]
+        for componente in componentes_ativos:
+            linhas.extend(_serie_pressao_tikz(
+                resultado,
+                componente,
+                cores[componente],
+                altura,
+                escala_pressao,
+                preencher=True,
+                largura_linha=1.0,
+            ))
+        if indice == 3:
+            linhas.extend(_serie_pressao_tikz(
+                resultado,
+                "total",
+                "red!80!black",
+                altura,
+                escala_pressao,
+                preencher=False,
+                largura_linha=2.1,
+            ))
+            titulo = "Soma das parcelas: pressão total"
+        else:
+            titulo = " + ".join(nomes[item] for item in componentes_ativos)
+        linhas.append(
+            rf"\node[font=\small\bfseries,align=center] at ({_decimal_tikz(largura / 2)},{_decimal_tikz(altura + .85)}) "
+            + "{" + titulo + "};"
         )
-        quadro.append(r"\end{tikzpicture}")
-        frames.append("\n".join(quadro))
+        linhas.append(r"\end{tikzpicture}")
+        frames.append("\n".join(linhas))
     return "\n\\newframe\n".join(frames)
+
+
+def _tikz_esquema_integracao(
+    entradas: dict[str, Any], resultado: dict[str, Any]
+) -> str:
+    """Desenha o trapézio de pressão de um trecho e sua resultante no centroide."""
+    altura_muro = float(entradas["altura_muro_m"])
+    candidatos = []
+    for z_1, z_2, p_1, p_2 in _series_pressao(resultado, "total"):
+        altura_trecho = z_2 - z_1
+        empuxo = altura_trecho * (p_1 + p_2) / 2.0
+        if empuxo > 1e-10:
+            candidatos.append((empuxo, z_1, z_2, p_1, p_2))
+    if not candidatos:
+        return r"\begin{tikzpicture}\node {Sem pressão lateral compressiva para integrar.};\end{tikzpicture}"
+
+    empuxo, z_1, z_2, p_1, p_2 = max(candidatos, key=lambda item: item[0])
+    altura_trecho = z_2 - z_1
+    # y_local é contado desde a base do trecho, onde atua a pressão p_2.
+    y_local = altura_trecho * (2.0 * p_1 + p_2) / (3.0 * (p_1 + p_2))
+    x_centroide = (p_1 * p_1 + p_1 * p_2 + p_2 * p_2) / (3.0 * (p_1 + p_2))
+    largura = 3.8
+    escala_pressao = largura / max(p_1, p_2, 1e-9)
+    x_1, x_2 = p_1 * escala_pressao, p_2 * escala_pressao
+    x_g = x_centroide * escala_pressao
+    y_superior, y_inferior = altura_trecho, 0.0
+    y_global = altura_muro - z_2 + y_local
+    rotulo_trecho = _texto_tex(
+        next((t["identificacao_trecho"] for t in resultado["trechos"]
+              if float(t["profundidade_superior_m"]) <= z_1 + 1e-9
+              and float(t["profundidade_inferior_m"]) >= z_2 - 1e-9),
+             "trecho de integração")
+    )
+    return "\n".join([
+        r"\begin{tikzpicture}[x=1cm,y=.78cm,>=Stealth]",
+        rf"\draw[->] (0,-.25) -- (0,{_decimal_tikz(altura_trecho + .35)}) node[above left,font=\scriptsize] {{Altura do trecho}};",
+        rf"\draw[->] (0,-.25) -- ({_decimal_tikz(largura + 2.25)},-.25) node[right,font=\scriptsize] {{Pressão (kPa)}};",
+        rf"\fill[blue!18] (0,{_decimal_tikz(y_superior)}) -- ({_decimal_tikz(x_1)},{_decimal_tikz(y_superior)}) -- "
+        + f"({_decimal_tikz(x_2)},{_decimal_tikz(y_inferior)}) -- (0,{_decimal_tikz(y_inferior)}) -- cycle;",
+        rf"\draw[blue!75!black,thick] (0,{_decimal_tikz(y_superior)}) -- ({_decimal_tikz(x_1)},{_decimal_tikz(y_superior)}) -- "
+        + f"({_decimal_tikz(x_2)},{_decimal_tikz(y_inferior)}) -- (0,{_decimal_tikz(y_inferior)});",
+        rf"\draw[<->] ({_decimal_tikz(largura + .2)},0) -- ({_decimal_tikz(largura + .2)},{_decimal_tikz(altura_trecho)}) "
+        + rf"node[above right,font=\scriptsize,fill=white,inner sep=1pt] {{$\Delta z={_numero(altura_trecho)}\,\mathrm{{m}}$}};",
+        rf"\node[anchor=south west,font=\scriptsize,fill=white,inner sep=1pt] at ({_decimal_tikz(x_1 + .05)},{_decimal_tikz(y_superior)}) {{$p_1={_numero(p_1)}$}};",
+        rf"\node[anchor=south east,font=\scriptsize,fill=white,inner sep=1pt] at ({_decimal_tikz(x_2 - .05)},{_decimal_tikz(y_inferior + .05)}) {{$p_2={_numero(p_2)}$}};",
+        rf"\draw[dashed,red!70!black] (0,{_decimal_tikz(y_local)}) -- ({_decimal_tikz(x_g)},{_decimal_tikz(y_local)});",
+        rf"\fill[red!75!black] ({_decimal_tikz(x_g)},{_decimal_tikz(y_local)}) circle (2.2pt) node[above right,font=\scriptsize] {{$G$}};",
+        rf"\node[anchor=west,font=\scriptsize] at ({_decimal_tikz(largura + 1.05)},{_decimal_tikz(altura_trecho * .78)}) "
+        + rf"{{$E={_numero(empuxo)}\,\mathrm{{kN/m}}$}};",
+        rf"\node[anchor=west,font=\scriptsize] at ({_decimal_tikz(largura + 1.05)},{_decimal_tikz(altura_trecho * .52)}) "
+        + rf"{{$y_G={_numero(y_local)}\,\mathrm{{m}}$ desde a base do trecho}};",
+        rf"\node[anchor=west,font=\scriptsize] at ({_decimal_tikz(largura + 1.05)},{_decimal_tikz(altura_trecho * .26)}) "
+        + rf"{{$y_{{base}}={_numero(y_global)}\,\mathrm{{m}}$ desde a ponta}};",
+        rf"\node[anchor=west,font=\scriptsize] at ({_decimal_tikz(largura + 1.05)},{_decimal_tikz(altura_trecho + .72)}) {{{rotulo_trecho}}};",
+        r"\end{tikzpicture}",
+    ])
+
+
+def _tikz_esquema_equilibrio(
+    entradas: dict[str, Any], resultado: dict[str, Any]
+) -> str:
+    """Desenha a decomposição do peso e as ações consideradas no equilíbrio."""
+    h = float(entradas["altura_muro_m"])
+    b = float(entradas["largura_base_m"])
+    t = float(entradas["largura_topo_m"])
+    resumo = resultado["resumo"]
+    verificacoes = resultado["verificacoes"]
+    escala = min(5.2 / max(h, 1e-9), 7.8 / max(b, 1e-9))
+    largura_tri = b - t
+    x_tri = 2.0 * largura_tri / 3.0
+    y_tri = h / 3.0
+    x_ret = b - t / 2.0
+    y_ret = h / 2.0
+    gamma_concreto = float(entradas["peso_especifico_concreto_kN_m3"])
+    peso_tri = 0.5 * largura_tri * h * gamma_concreto
+    peso_ret = t * h * gamma_concreto
+    h_total = float(resumo["componente_horizontal_total_kN_m"])
+    m_tomb = float(resumo["momento_tombador_ponta_kNm_m"])
+    y_h = min(h, max(0.0, m_tomb / h_total if h_total > 1e-12 else h / 2.0))
+    x_face_h = largura_tri * y_h / h
+    v_desc = float(resumo["componente_vertical_descendente_kN_m"])
+    v_total = float(resumo["carga_vertical_total_kN_m"])
+    x_r = float(verificacoes["posicao_resultante_desde_ponta_m"])
+    atrito_base = float(entradas["coeficiente_atrito_base"])
+    linhas = [
+        rf"\begin{{tikzpicture}}[x={_decimal_tikz(escala)}cm,y={_decimal_tikz(escala)}cm,>=Stealth]",
+        rf"\fill[brown!17] (0,0) -- ({_decimal_tikz(largura_tri)},0) -- ({_decimal_tikz(largura_tri)},{_decimal_tikz(h)}) -- cycle;",
+        rf"\fill[gray!35] ({_decimal_tikz(largura_tri)},0) rectangle ({_decimal_tikz(b)},{_decimal_tikz(h)});",
+        rf"\draw[black!80,very thick] (0,0) -- ({_decimal_tikz(b)},0) -- ({_decimal_tikz(b)},{_decimal_tikz(h)}) -- "
+        + f"({_decimal_tikz(largura_tri)},{_decimal_tikz(h)}) -- cycle;",
+        rf"\draw[black!55,dashed] ({_decimal_tikz(largura_tri)},0) -- ({_decimal_tikz(largura_tri)},{_decimal_tikz(h)});",
+        rf"\draw[orange!85!black,->,thick] ({_decimal_tikz(x_tri)},{_decimal_tikz(y_tri + .8)}) -- "
+        + f"({_decimal_tikz(x_tri)},{_decimal_tikz(y_tri)});",
+        rf"\node[anchor=south,font=\scriptsize] at ({_decimal_tikz(x_tri)},{_decimal_tikz(y_tri + .85)}) "
+        + rf"{{$W_{{tri}}={_numero(peso_tri)}\,\mathrm{{kN/m}}$}};",
+        rf"\draw[orange!85!black,->,thick] ({_decimal_tikz(x_ret)},{_decimal_tikz(y_ret + .8)}) -- "
+        + f"({_decimal_tikz(x_ret)},{_decimal_tikz(y_ret)});",
+        rf"\node[anchor=south,font=\scriptsize] at ({_decimal_tikz(x_ret)},{_decimal_tikz(y_ret + .85)}) "
+        + rf"{{$W_{{ret}}={_numero(peso_ret)}\,\mathrm{{kN/m}}$}};",
+        rf"\node[below left,font=\scriptsize] at (0,0) {{Ponta}};",
+        rf"\node[below right,font=\scriptsize] at ({_decimal_tikz(b)},0) {{Calcanhar}};",
+    ]
+    if h_total > 1e-12:
+        linhas.extend([
+            rf"\draw[blue!75!black,->,very thick] ({_decimal_tikz(x_face_h - .8)},{_decimal_tikz(y_h)}) -- "
+            + f"({_decimal_tikz(x_face_h + .55)},{_decimal_tikz(y_h)});",
+            rf"\node[anchor=south,font=\scriptsize,text=blue!65!black] at ({_decimal_tikz(x_face_h - .1)},{_decimal_tikz(y_h + .05)}) "
+            + rf"{{$H_{{tot}}={_numero(h_total)}\,\mathrm{{kN/m}}$}};",
+        ])
+    if v_desc > 1e-12:
+        linhas.extend([
+            rf"\draw[purple!75!black,->,thick] ({_decimal_tikz(b + .28)},{_decimal_tikz(.9)}) -- ({_decimal_tikz(b + .28)},0);",
+            rf"\node[anchor=west,font=\scriptsize,text=purple!70!black] at ({_decimal_tikz(b + .35)},{_decimal_tikz(.55)}) "
+            + rf"{{$V_d={_numero(v_desc)}$}};",
+        ])
+    if 0 <= x_r <= b:
+        linhas.extend([
+            rf"\draw[green!55!black,->,very thick] ({_decimal_tikz(x_r)},{_decimal_tikz(-.8)}) -- ({_decimal_tikz(x_r)},0);",
+            rf"\node[anchor=north,font=\scriptsize,text=green!45!black] at ({_decimal_tikz(x_r)},{_decimal_tikz(-.8)}) "
+            + rf"{{$V={_numero(v_total)}\,\mathrm{{kN/m}}$}};",
+            rf"\draw[red!75!black,->,thick] ({_decimal_tikz(b + .45)},{_decimal_tikz(-1.25)}) -- "
+            + f"({_decimal_tikz(b - .25)},{_decimal_tikz(-1.25)});",
+            rf"\node[anchor=north west,font=\scriptsize,text=red!70!black] at ({_decimal_tikz(b + .52)},{_decimal_tikz(-1.28)}) "
+            + rf"{{$R_f=Vf={_numero(v_total * atrito_base)}\,\mathrm{{kN/m}}$}};",
+        ])
+    linhas.append(r"\end{tikzpicture}")
+    return "\n".join(linhas)
+
+
+def _tikz_tensoes_base(
+    entradas: dict[str, Any], resultado: dict[str, Any]
+) -> str:
+    """Desenha a distribuição de contato e a posição da resultante vertical."""
+    b = float(entradas["largura_base_m"])
+    resumo = resultado["resumo"]
+    verificacoes = resultado["verificacoes"]
+    regime = verificacoes["regime_pressao_base"]
+    x_r = float(verificacoes["posicao_resultante_desde_ponta_m"])
+    e = float(verificacoes["excentricidade_resultante_m"])
+    v_total = float(resumo["carga_vertical_total_kN_m"])
+    sigma_max = verificacoes["tensao_maxima_base_kPa"]
+    sigma_min = verificacoes["tensao_minima_base_kPa"]
+    escala_x = 6.2 / max(b, 1e-9)
+    largura = b * escala_x
+    linhas = [
+        rf"\begin{{tikzpicture}}[x={_decimal_tikz(escala_x)}cm,y=1cm,>=Stealth]",
+        rf"\draw[black!75,very thick] (0,0) -- ({_decimal_tikz(b)},0);",
+        rf"\node[anchor=north east,font=\scriptsize] at (0,0) {{Ponta}};",
+        rf"\node[anchor=north west,font=\scriptsize] at ({_decimal_tikz(b)},0) {{Calcanhar}};",
+    ]
+    if regime == "FORA DA BASE" or sigma_max is None or sigma_min is None:
+        linhas.extend([
+            rf"\draw[red!75!black,dashed,thick] (0,.12) rectangle ({_decimal_tikz(b)},.45);",
+            rf"\draw[red!75!black,->,very thick] ({_decimal_tikz(x_r)},-.55) -- ({_decimal_tikz(x_r)},.8);",
+            rf"\node[above right,font=\scriptsize,text=red!70!black,align=left] at ({_decimal_tikz(x_r)},{_decimal_tikz(.8)}) "
+            + r"{Resultante fora da base;\\sem distribuição de contato calculada};",
+        ])
+    else:
+        sigma_max = float(sigma_max)
+        sigma_min = float(sigma_min)
+        escala_sigma = 2.6 / max(sigma_max, 1e-9)
+        preenchimento = []
+        contorno = []
+        cotas_rotuladas = []
+        if regime == "TRIANGULAR":
+            largura_contato = min(b, 3.0 * min(max(x_r, 0.0), max(b - x_r, 0.0)))
+            if x_r <= b / 2.0:
+                x_zero = largura_contato
+                y_pico = sigma_max * escala_sigma
+                preenchimento.append(
+                    rf"\fill[green!22] (0,0) -- (0,{_decimal_tikz(y_pico)}) -- "
+                    + f"({_decimal_tikz(x_zero)},0) -- cycle;"
+                )
+                contorno.append(
+                    rf"\draw[green!60!black,very thick] (0,{_decimal_tikz(y_pico)}) -- "
+                    + f"({_decimal_tikz(x_zero)},0);"
+                )
+                cotas_rotuladas.extend([
+                    rf"\node[above,font=\scriptsize] at (0,{_decimal_tikz(y_pico + .05)}) {{$\sigma_{{max}}={_numero(sigma_max)}$}};",
+                    rf"\node[above right,font=\scriptsize] at ({_decimal_tikz(x_zero)},.02) {{$\sigma=0$}};",
+                    rf"\draw[dashed,green!50!black] ({_decimal_tikz(x_zero)},0) -- ({_decimal_tikz(x_zero)},.25);",
+                ])
+            else:
+                x_zero = b - largura_contato
+                y_pico = sigma_max * escala_sigma
+                preenchimento.append(
+                    rf"\fill[green!22] ({_decimal_tikz(x_zero)},0) -- ({_decimal_tikz(b)},{_decimal_tikz(y_pico)}) -- "
+                    + f"({_decimal_tikz(b)},0) -- cycle;"
+                )
+                contorno.append(
+                    rf"\draw[green!60!black,very thick] ({_decimal_tikz(x_zero)},0) -- "
+                    + f"({_decimal_tikz(b)},{_decimal_tikz(y_pico)});"
+                )
+                cotas_rotuladas.extend([
+                    rf"\node[above left,font=\scriptsize] at ({_decimal_tikz(b)},{_decimal_tikz(y_pico + .05)}) {{$\sigma_{{max}}={_numero(sigma_max)}$}};",
+                    rf"\node[above left,font=\scriptsize] at ({_decimal_tikz(x_zero)},.02) {{$\sigma=0$}};",
+                    rf"\draw[dashed,green!50!black] ({_decimal_tikz(x_zero)},0) -- ({_decimal_tikz(x_zero)},.25);",
+                ])
+        else:
+            if e >= 0:
+                sigma_toe, sigma_calcanhar = sigma_max, sigma_min
+            else:
+                sigma_toe, sigma_calcanhar = sigma_min, sigma_max
+            y_toe = sigma_toe * escala_sigma
+            y_calcanhar = sigma_calcanhar * escala_sigma
+            preenchimento.append(
+                rf"\fill[green!22] (0,0) -- (0,{_decimal_tikz(y_toe)}) -- "
+                + f"({_decimal_tikz(b)},{_decimal_tikz(y_calcanhar)}) -- ({_decimal_tikz(b)},0) -- cycle;"
+            )
+            contorno.append(
+                rf"\draw[green!60!black,very thick] (0,{_decimal_tikz(y_toe)}) -- "
+                + f"({_decimal_tikz(b)},{_decimal_tikz(y_calcanhar)});"
+            )
+            cotas_rotuladas.extend([
+                rf"\node[anchor=south west,font=\scriptsize,fill=white,inner sep=1pt] at (0,{_decimal_tikz(y_toe + .05)}) {{$\sigma_{{toe}}={_numero(sigma_toe)}$}};",
+                rf"\node[anchor=south east,font=\scriptsize,fill=white,inner sep=1pt] at ({_decimal_tikz(b)},{_decimal_tikz(y_calcanhar + .05)}) {{$\sigma_{{calcanhar}}={_numero(sigma_calcanhar)}$}};",
+            ])
+        linhas.extend([
+            *preenchimento,
+            *contorno,
+            *cotas_rotuladas,
+            rf"\draw[blue!75!black,->,very thick] ({_decimal_tikz(x_r)},-.65) -- ({_decimal_tikz(x_r)},-.08);",
+            rf"\node[below,font=\scriptsize,text=blue!65!black] at ({_decimal_tikz(x_r)},{_decimal_tikz(-.65)}) {{$R_V=V={_numero(v_total)}\,\mathrm{{kN/m}}$}};",
+        ])
+        centro = b / 2.0
+        if abs(e) > 1e-8:
+            linhas.extend([
+                rf"\draw[densely dashed] ({_decimal_tikz(centro)},-1.05) -- ({_decimal_tikz(centro)},-.15);",
+                rf"\draw[<->] ({_decimal_tikz(centro)},-1.3) -- ({_decimal_tikz(x_r)},-1.3) "
+                + rf"node[midway,below,font=\scriptsize] {{$e={_numero(e)}\,\mathrm{{m}}$}};",
+            ])
+        linhas.append(
+            rf"\draw[<->] (0,-1.9) -- ({_decimal_tikz(b)},-1.9) "
+            + rf"node[midway,below,font=\scriptsize] {{$b={_numero(b)}\,\mathrm{{m}}$}};"
+        )
+    linhas.append(r"\end{tikzpicture}")
+    return "\n".join(linhas)
 
 
 def _tikz_verificacoes(
@@ -442,10 +750,11 @@ def _tikz_verificacoes(
 ) -> str:
     resumo = resultado["resumo"]
     checks = resultado["verificacoes"]
+    fator_tensao = checks["fator_seguranca_tensao_admissivel"]
     fatores = [
         float(checks["fator_seguranca_tombamento"]),
         float(checks["fator_seguranca_deslizamento"]),
-        float(checks["fator_seguranca_tensao_admissivel"] or 0.0),
+        float(fator_tensao) if fator_tensao is not None else 0.0,
         float(entradas["fator_seguranca_minimo_tombamento"]),
         float(entradas["fator_seguranca_minimo_deslizamento"]),
         1.0,
@@ -458,7 +767,7 @@ def _tikz_verificacoes(
         ("Deslizamento", fatores[1], fatores[4], checks["status_deslizamento"]),
         (
             "Tensão admissível",
-            fatores[2],
+            float(fator_tensao) if fator_tensao is not None else None,
             1.0,
             checks["status_tensao_maxima_base"],
         ),
@@ -466,23 +775,36 @@ def _tikz_verificacoes(
     cores = {"ATENDE": "green!55!black", "REVER": "red!65!black", "BLOQUEADO": "gray!65"}
     linhas = [
         r"\begin{tikzpicture}[x=1cm,y=1cm,>=Stealth]",
-        rf"\draw[->] (0,.25) -- ({_decimal_tikz(largura_cm + .4)},.25) node[right] {{Fator calculado}};",
+        rf"\draw[->] (0,.25) -- ({_decimal_tikz(largura_cm + 2.7)},.25) node[right] {{Fator calculado}};",
     ]
     for indice, (rotulo, valor, alvo, status) in enumerate(dados):
         y = 2.4 - indice * 0.95
         cor = cores.get(status, "gray!65")
-        comprimento = max(0.0, valor) * fator_escala
+        comprimento = max(0.0, valor or 0.0) * fator_escala
         alvo_x = alvo * fator_escala
+        linhas.append(
+            rf"\node[anchor=east,font=\small] at (-.12,{_decimal_tikz(y + .15)}) {{{rotulo}}};"
+        )
+        if valor is None:
+            linhas.append(
+                rf"\node[anchor=west,font=\scriptsize,text=gray!70!black] at ({_decimal_tikz(largura_cm + .15)},{_decimal_tikz(y + .15)}) "
+                + rf"{{Não calculado · {status}}};"
+            )
+        else:
+            linhas.append(
+                rf"\fill[{cor},opacity=.82] (0,{_decimal_tikz(y)}) rectangle ({_decimal_tikz(comprimento)},{_decimal_tikz(y + .3)});"
+            )
         linhas.extend([
-            rf"\node[anchor=east,font=\small] at (-.12,{_decimal_tikz(y + .15)}) {{{rotulo}}};",
-            rf"\fill[{cor},opacity=.82] (0,{_decimal_tikz(y)}) rectangle ({_decimal_tikz(comprimento)},{_decimal_tikz(y + .3)});",
             rf"\draw[dashed,red!70!black] ({_decimal_tikz(alvo_x)},{_decimal_tikz(y - .08)}) -- "
             + f"({_decimal_tikz(alvo_x)},{_decimal_tikz(y + .4)});",
-            rf"\node[anchor=west,font=\scriptsize] at ({_decimal_tikz(comprimento + .05)},{_decimal_tikz(y + .15)}) "
-            + rf"{{$FS={_numero_tex(valor, 3)}$ · {status}}};",
             rf"\node[font=\tiny,text=red!70!black] at ({_decimal_tikz(alvo_x)},{_decimal_tikz(y - .18)}) "
             + rf"{{limite {_numero_tex(alvo, 2)}}};",
         ])
+        if valor is not None:
+            linhas.append(
+                rf"\node[anchor=west,font=\scriptsize] at ({_decimal_tikz(largura_cm + .15)},{_decimal_tikz(y + .15)}) "
+                + rf"{{$FS={_numero_tex(valor, 3)}$ · {status}}};"
+            )
     linhas.append(r"\end{tikzpicture}")
     return "\n".join(linhas)
 
@@ -542,6 +864,21 @@ def montar_relatorio_muro_tex(
         for key, value in verificacoes.items()
         if isinstance(value, (int, float)) or value is None
     }
+    verificacoes_contexto["excentricidade_absoluta_m"] = _numero_tex(
+        abs(float(verificacoes["excentricidade_resultante_m"]))
+    )
+    verificacoes_contexto["distancia_resultante_borda_m"] = _numero_tex(
+        min(
+            float(verificacoes["posicao_resultante_desde_ponta_m"]),
+            b - float(verificacoes["posicao_resultante_desde_ponta_m"]),
+        )
+    )
+    verificacoes_contexto["largura_contato_m"] = _numero_tex(
+        3.0 * min(
+            float(verificacoes["posicao_resultante_desde_ponta_m"]),
+            b - float(verificacoes["posicao_resultante_desde_ponta_m"]),
+        )
+    )
     contexto = {
         "nome_projeto": _texto_tex(nome_projeto),
         "metodo": _texto_tex(entradas_muro["metodo_empuxo"]),
@@ -567,6 +904,7 @@ def montar_relatorio_muro_tex(
             "deslizamento": _texto_tex(verificacoes["status_deslizamento"]),
             "tensao": _texto_tex(verificacoes["status_tensao_maxima_base"]),
             "regime": _texto_tex(verificacoes["regime_pressao_base"]),
+            "regime_codigo": verificacoes["regime_pressao_base"],
         },
         "numero_camadas": len(camadas_contexto),
         "numero_trechos": len(trechos),
@@ -576,6 +914,9 @@ def montar_relatorio_muro_tex(
         "diagrama_q_tikz": _tikz_diagrama_pressao(entradas_muro, resultado_muro, "sobrecarga", "orange!90!black"),
         "diagrama_agua_tikz": _tikz_diagrama_pressao(entradas_muro, resultado_muro, "agua", "cyan!60!black"),
         "animacao_pressao": _animacao_pressao(entradas_muro, resultado_muro),
+        "integracao_fatia_tikz": _tikz_esquema_integracao(entradas_muro, resultado_muro),
+        "equilibrio_muro_tikz": _tikz_esquema_equilibrio(entradas_muro, resultado_muro),
+        "tensoes_base_tikz": _tikz_tensoes_base(entradas_muro, resultado_muro),
         "verificacoes_tikz": _tikz_verificacoes(entradas_muro, resultado_muro),
         "triangulo": {
             "base": _numero_tex(b_tri), "area": _numero_tex(area_tri),

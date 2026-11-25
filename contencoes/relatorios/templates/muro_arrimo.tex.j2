@@ -20,6 +20,19 @@
 \setlength{\parskip}{5pt}
 \setlength{\parindent}{0pt}
 \setlist[itemize]{leftmargin=1.5em,itemsep=2pt,topsep=3pt}
+% Os capítulos começam no fluxo normal do texto para evitar páginas quase vazias.
+% Mantemos a numeração e as entradas no sumário da classe report.
+\makeatletter
+\renewcommand{\chapter}{\par\thispagestyle{plain}\global\@topnum\z@\@afterindentfalse\secdef\@chapter\@schapter}
+\renewcommand{\@makechapterhead}[1]{
+  \vspace*{1.15em}%
+  {\parindent\z@\raggedright\normalfont
+   \huge\bfseries\thechapter\enspace #1\par\nobreak\vskip .55em}}
+\renewcommand{\@makeschapterhead}[1]{
+  \vspace*{1.15em}%
+  {\parindent\z@\raggedright\normalfont
+   \huge\bfseries #1\par\nobreak\vskip .55em}}
+\makeatother
 \pagestyle{fancy}
 \fancyhf{}
 \lhead{Projeto Contenções · Muro de arrimo}
@@ -108,7 +121,6 @@ Critérios informados & $FS_{tomb,min}={{ entradas.fs_tomb_min }}$; $FS_{des,min
 Nível d'água & {% if entradas.z_na is none %}não informado{% else %}profundidade $z_{NA}={{ entradas.z_na }}\,\mathrm{m}$ a partir do topo{% endif %}; $\gamma_w={{ entradas.gamma_w }}\,\mathrm{kN/m^3}$.\\
 \end{tabularx}
 
-\clearpage
 \section{Perfil do solo}
 \begin{longtable}{c r r r r r}
 \toprule
@@ -225,27 +237,44 @@ O braço global é medido desde a ponta da base até a linha de ação da força
 {% endfor %}
 
 \chapter{Leitura dos diagramas}
-O diagrama mostra profundidade na vertical e pressão na horizontal. A força correspondente a uma parcela é a área sob seu diagrama; o momento depende também da posição do centroide dessa área.
-\begin{figure}[ht]
+Nos gráficos, a ordenada vertical é a cota $y$, medida para cima desde a ponta da base ($y=0$). Nas equações das páginas anteriores, $z$ é a profundidade medida para baixo desde o topo; as duas referências se relacionam por $y=H-z$. A pressão cresce na horizontal. Todos os quatro desenhos usam a mesma escala horizontal, definida pela maior pressão total, para que a comparação entre parcelas seja verdadeira.
+\par\smallskip
+\noindent
+\begin{minipage}[t]{.48\textwidth}
 \centering
-{{ diagrama_solo_tikz }}
-\caption{Pressão lateral de solo.}
-\end{figure}
-\begin{figure}[ht]
+{\bfseries (a) Pressão efetiva de solo}\par\vspace{2pt}
+\resizebox{.92\linewidth}{!}{ {{ diagrama_solo_tikz }} }
+\end{minipage}\hfill
+\begin{minipage}[t]{.48\textwidth}
 \centering
-{{ diagrama_q_tikz }}
-\caption{Pressão lateral causada pela sobrecarga.}
-\end{figure}
-\begin{figure}[ht]
+{\bfseries (b) Pressão da sobrecarga}\par\vspace{2pt}
+\resizebox{.92\linewidth}{!}{ {{ diagrama_q_tikz }} }
+\end{minipage}
+\par\medskip\noindent
+\begin{minipage}[t]{.48\textwidth}
 \centering
-{{ diagrama_agua_tikz }}
-\caption{Pressão hidrostática.}
-\end{figure}
-\begin{figure}[ht]
+{\bfseries (c) Pressão da água}\par\vspace{2pt}
+\resizebox{.92\linewidth}{!}{ {{ diagrama_agua_tikz }} }
+\end{minipage}\hfill
+\begin{minipage}[t]{.48\textwidth}
 \centering
-{{ diagrama_total_tikz }}
-\caption{Pressão lateral total usada para visualizar a soma das parcelas.}
-\end{figure}
+{\bfseries (d) Soma: pressão total}\par\vspace{2pt}
+\resizebox{.92\linewidth}{!}{ {{ diagrama_total_tikz }} }
+\end{minipage}
+
+\section{Da área à força e ao braço de aplicação}
+Em cada trecho, a pressão varia linearmente entre $p_1$ no topo e $p_2$ na base. A área do trapézio fornece a força horizontal por metro de muro; o centroide da área informa onde essa força atua:
+\begin{align*}
+E&=\int_{z_1}^{z_2}p(z)\,dz
+ =\frac{(p_1+p_2)\Delta z}{2},\\
+y_G&=\frac{\Delta z}{3}\,\frac{2p_1+p_2}{p_1+p_2}
+\quad\text{medido para cima desde a base do trecho},\\
+y_{G,base}&=H-z_2+y_G.
+\end{align*}
+O esquema detalha o trecho que mais contribui para a força total neste caso. As tabelas anteriores mantêm as contas de cada trecho e de cada parcela.
+\begin{center}
+{{ integracao_fatia_tikz }}
+\end{center}
 
 \section{Animação da composição das pressões}
 Nos visualizadores compatíveis, os controles abaixo percorrem quatro quadros: solo, sobrecarga, água e soma total. O primeiro quadro permanece como pôster estático em leitores sem suporte a animação.
@@ -289,6 +318,10 @@ V&=W+V_d={{ resumo.peso_muro_kN_m}}+{{ resumo.componente_vertical_descendente_kN
 M_{tomb}&=(M_s+M_q)\cos\delta+M_w={{ resumo.momento_tombador_ponta_kNm_m}}\,\mathrm{kN\cdot m/m},\\
 M_{est}&=M_{tri}+M_{ret}+V_db={{ triangulo.momento }}+{{ retangulo.momento }}+{{ resumo.componente_vertical_descendente_kN_m}}\times{{ entradas.b }}={{ resumo.momento_estabilizador_total_kNm_m}}\,\mathrm{kN\cdot m/m}.
 \end{align*}
+\begin{center}
+{{ equilibrio_muro_tikz }}
+\end{center}
+\begin{center}\small\textit{Esquema de sinais: os pesos e $V_d$ atuam para baixo; $H_{tot}$ empurra o muro para a direita; a reação de atrito $R_f$ resiste a esse movimento.}\end{center}
 
 \chapter{Verificações de estabilidade}
 \section{Tombamento}
@@ -315,17 +348,48 @@ e&=\frac{b}{2}-x_R=\frac{ {{ entradas.b }} }2-{{ checks.posicao_resultante_desde
 \end{align*}
 
 \section{Tensões transmitidas à fundação}
-Quando a resultante está na faixa central da base ($|e|\le b/6$), a distribuição é trapezoidal:
+O regime calculado neste caso é \textbf{ {{ status.regime }} }. A expressão usada depende da posição da resultante vertical:
+{% if status.regime_codigo == "TRAPEZOIDAL" %}
+Como $|e|\le b/6$, toda a base permanece comprimida e o diagrama é trapezoidal. Aplicando a distribuição linear de tensões:
 \[
 \sigma_{max,min}=\frac{V}{b}\left(1\pm\frac{6|e|}{b}\right).
 \]
-Para contato triangular, o aplicativo adota $\sigma_{min}=0$ e determina a tensão máxima a partir da posição da resultante. Neste caso, o regime informado é \textbf{ {{ status.regime }} }.
+Para os valores deste caso, $V={{ resumo.carga_vertical_total_kN_m }}\,\mathrm{kN/m}$, $b={{ entradas.b }}\,\mathrm{m}$ e $|e|={{ checks.excentricidade_absoluta_m }}\,\mathrm{m}$:
 \begin{align*}
-\sigma_{max}&={{ checks.tensao_maxima_base_kPa }}\,\mathrm{kPa},\\
-\sigma_{min}&={{ checks.tensao_minima_base_kPa }}\,\mathrm{kPa},\\
-FS_{qadm}&=\frac{q_{adm}}{\sigma_{max}}=\frac{ {{ pressao_admissivel }} }{ {{ checks.tensao_maxima_base_kPa }} }={{ checks.fator_seguranca_tensao_admissivel }}.
+\sigma_{max}&=\frac{V}{b}\left(1+\frac{6|e|}{b}\right)
+ &=\frac{ {{ resumo.carga_vertical_total_kN_m }} }{ {{ entradas.b }} }
+\left(1+\frac{6\times{{ checks.excentricidade_absoluta_m }} }{ {{ entradas.b }} }\right)
+= {{ checks.tensao_maxima_base_kPa }}\,\mathrm{kPa},\\
+\sigma_{min}&=\frac{V}{b}\left(1-\frac{6|e|}{b}\right)
+ &=\frac{ {{ resumo.carga_vertical_total_kN_m }} }{ {{ entradas.b }} }
+\left(1-\frac{6\times{{ checks.excentricidade_absoluta_m }} }{ {{ entradas.b }} }\right)
+= {{ checks.tensao_minima_base_kPa }}\,\mathrm{kPa}.
 \end{align*}
-Tensão admissível informada: $q_{adm}={{ entradas.qadm }}\,\mathrm{kPa}$. Resultado da verificação: \textbf{ {{ status.tensao }} }.
+{% elif status.regime_codigo == "TRIANGULAR" %}
+A resultante está fora do terço central, mas ainda dentro da base. Parte da fundação perde contato e a pressão é triangular. Definindo $d$ como a distância da resultante à borda mais próxima, a largura comprimida é $a=3d$:
+\begin{align*}
+d&=\min(x_R,b-x_R)={{ checks.distancia_resultante_borda_m }}\,\mathrm{m},\\
+a&=3d=3\times{{ checks.distancia_resultante_borda_m }}={{ checks.largura_contato_m }}\,\mathrm{m},\\
+\sigma_{min}&=0,\\
+\sigma_{max}&=\frac{2V}{a}=\frac{2V}{3d}
+=\frac{2\times{{ resumo.carga_vertical_total_kN_m }}}{3\times{{ checks.distancia_resultante_borda_m }}}
+={{ checks.tensao_maxima_base_kPa }}\,\mathrm{kPa}.
+\end{align*}
+{% else %}
+A resultante vertical está fora da largura da base. O equilíbrio de contato simples não consegue representar uma distribuição compressiva que a mantenha dentro do apoio. Por isso, este modelo bloqueia o cálculo de $\sigma_{max}$, $\sigma_{min}$ e do fator contra $q_{adm}$ neste caso; a posição deve ser revista antes de interpretar tensões de contato.
+{% endif %}
+\begin{center}
+{{ tensoes_base_tikz }}
+\end{center}
+{% if status.regime_codigo != "FORA DA BASE" %}
+Tensão admissível informada: $q_{adm}={{ entradas.qadm }}\,\mathrm{kPa}$. O fator de verificação é
+\[
+FS_{qadm}=\frac{q_{adm}}{\sigma_{max}}=\frac{ {{ pressao_admissivel }} }{ {{ checks.tensao_maxima_base_kPa }} }={{ checks.fator_seguranca_tensao_admissivel }}.
+\]
+Resultado da verificação: \textbf{ {{ status.tensao }} }.
+{% else %}
+Resultado do aplicativo para tensões de contato: \textbf{ {{ status.tensao }} }.
+{% endif %}
 
 \section{Resumo visual dos critérios}
 \begin{center}
@@ -335,7 +399,13 @@ As barras exibem os fatores calculados e as linhas tracejadas mostram os limites
 
 \chapter{Conclusão guiada e limites do modelo}
 \begin{resultado}
-Para este conjunto de entradas, o aplicativo encontrou: $FS_{tomb}={{ checks.fator_seguranca_tombamento }}$ ({{ status.tombamento }}); $FS_{des}={{ checks.fator_seguranca_deslizamento }}$ ({{ status.deslizamento }}); $\sigma_{max}={{ checks.tensao_maxima_base_kPa }}\,\mathrm{kPa}$ ({{ status.tensao }}); regime de contato {{ status.regime }}. Esses resultados respondem somente às verificações implementadas e às hipóteses listadas neste documento.
+Para este conjunto de entradas, o aplicativo encontrou: $FS_{tomb}={{ checks.fator_seguranca_tombamento }}$ ({{ status.tombamento }}) e $FS_{des}={{ checks.fator_seguranca_deslizamento }}$ ({{ status.deslizamento }}). Regime de contato: {{ status.regime }}.
+{% if status.regime_codigo == "FORA DA BASE" %}
+Como a resultante ficou fora da base, $\sigma_{max}$ e o fator contra $q_{adm}$ não foram calculados; essa verificação está bloqueada pelo modelo.
+{% else %}
+Para o regime {{ status.regime }}, $\sigma_{max}={{ checks.tensao_maxima_base_kPa }}\,\mathrm{kPa}$ e a verificação contra $q_{adm}$ está {{ status.tensao }}.
+{% endif %}
+Esses resultados respondem somente às verificações implementadas e às hipóteses listadas neste documento.
 \end{resultado}
 
 \begin{enumerate}[label=\textbf{Passo \arabic*.},leftmargin=2.4cm]
